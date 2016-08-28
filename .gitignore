@@ -1,14 +1,1 @@
-.gitignore
-compile_commands.json
-*.o
-main
-test_lb_set
-test_measure
-test_measure_ll
-test_interpreter
-test_structmap
-test_misc
-map-*-*
-perf.data
-*.out
-measure-flame.sh.*
+build/
