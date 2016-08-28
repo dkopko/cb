@@ -72,3 +72,13 @@ add_executable(test_structmap "${CMAKE_SOURCE_DIR}/test/test_structmap.c")
 target_link_libraries(test_structmap libcb_static)
 set_target_properties(test_structmap PROPERTIES
     LINKER_LANGUAGE C)
+
+
+enable_testing()
+add_test(test_main test_main)
+add_test(test_misc test_misc)
+add_test(test_lb_set test_lb_set)
+add_test(test_measure test_measure)
+add_test(test_measure_ll test_measure_ll)
+add_test(test_interpreter test_interpreter)
+add_test(test_structmap test_structmap)
