@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.5)
 project(cb C CXX)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
+option(COVERAGE "Build with test coverage" OFF)
+
 set(CB_SOURCES
   "${CMAKE_SOURCE_DIR}/src/cb.c"
   "${CMAKE_SOURCE_DIR}/src/cb_interpreter.c"
@@ -16,8 +18,12 @@ include_directories(
   "${CMAKE_SOURCE_DIR}/src"
 )
 
+set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
+set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
+set(CMAKE_LDFLAGS_COVERAGE "${CMAKE_LDFLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
 
-set(CB_CFLAGS "-std=c99 -Wall -Wno-unused-function -g -mtune=native -D_GNU_SOURCE -Werror=strict-prototypes -Werror=old-style-definition -Werror=missing-prototypes")
+set(CB_CFLAGS "-std=c99 -Wall -Wno-unused-function -g -mtune=native -D_GNU_SOURCE -Werror=strict-prototypes -Werror=old-style-definition -Werror=missing-prototypes ${COVERAGE_CFLAGS}")
+
 
 add_library(libcb_static STATIC ${CB_SOURCES})
 set_target_properties(libcb_static PROPERTIES
@@ -31,7 +37,9 @@ install(TARGETS libcb_static DESTINATION lib)
 
 add_executable(test_misc "${CMAKE_SOURCE_DIR}/test/test_misc.c")
 set_target_properties(test_misc PROPERTIES
-    LINKER_LANGUAGE C)
+    LINKER_LANGUAGE C
+
+)
 
 add_executable(test_main "${CMAKE_SOURCE_DIR}/test/main.c")
 target_link_libraries(test_main libcb_static)
@@ -64,15 +72,3 @@ add_executable(test_structmap "${CMAKE_SOURCE_DIR}/test/test_structmap.c")
 target_link_libraries(test_structmap libcb_static)
 set_target_properties(test_structmap PROPERTIES
     LINKER_LANGUAGE C)
-
-
-#add_custom_target(coverage
-#    DEPENDS unit_tests
-#    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-#    COMMAND lcov --directory . --zerocounters --rc lcov_branch_coverage=1
-#    COMMAND ./unit_tests
-#    COMMAND lcov --directory . --capture --output-file coverage.info --rc lcov_branch_coverage=1
-#    COMMAND lcov --remove coverage.info '/usr/*' --output-file coverage.info.cleaned --rc lcov_branch_coverage=1
-#    COMMAND genhtml -o coverage coverage.info.cleaned --rc lcov_branch_coverage=1
-#    COMMAND rm coverage.info coverage.info.cleaned
-#)
