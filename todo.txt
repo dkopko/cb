@@ -1,0 +1,10 @@
+* Figure out why there is a bump for cbbst/cbmap at 10^4 in plot output for
+  INSERT and REMOVE operations.
+* Determine correct behavior for consolidation.
+* Determine correct behavior for garbage-collection.
+  - Should GC only work on an already-consolidated structure?  It seems like 
+    this is unnecessarily limiting, but if we wanted it to work
+    non-consolidated.
+* Determine communications pattern between mutator and GC threads.
+
+  
