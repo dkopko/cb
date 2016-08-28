@@ -394,7 +394,7 @@ cb_structmap_heighten(struct cb      **cb,
 }
 
 
-bool
+static bool
 cb_structmap_validate(const struct cb *cb,
                       cb_offset_t      node_offset,
                       const char      *name)

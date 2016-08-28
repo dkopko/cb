@@ -130,9 +130,9 @@ main(int argc, char **argv)
     (void)argc, (void)argv;
 
     test_mask_below_bit();
-    test_power_of_2_size_gt();
-    wtf();
-    wtf2();
+    //test_power_of_2_size_gt();
+    //wtf();
+    //wtf2();
 
     return EXIT_SUCCESS;
 }

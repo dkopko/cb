@@ -2694,7 +2694,7 @@ static int traversal_delete(const struct cb_key   *k,
  * upon reaching a CB_CMD_BST, the newly-built tree and the old tree should
  * be merged/joined/concatenated.
  */
-int cb_map_consolidate_internal(struct cb_map *cb_map)
+static int cb_map_consolidate_internal(struct cb_map *cb_map)
 {
     struct cb_command_any *cmd, *new_cmd;
     cb_offset_t insertions_root_node_offset = CB_BST_SENTINEL,
@@ -2847,7 +2847,7 @@ int cb_map_consolidate(struct cb_map *cb_map)
 }
 
 
-char* cb_key_to_str(struct cb_key *key)
+static char* cb_key_to_str(struct cb_key *key)
 {
     char *str;
     int ret;
@@ -2857,7 +2857,7 @@ char* cb_key_to_str(struct cb_key *key)
 }
 
 
-char* cb_value_to_str(struct cb_value *value)
+static char* cb_value_to_str(struct cb_value *value)
 {
     char *str;
     int ret;
@@ -2867,7 +2867,7 @@ char* cb_value_to_str(struct cb_value *value)
 }
 
 
-char* cb_bst_to_str(const struct cb *cb, cb_offset_t node_offset)
+static char* cb_bst_to_str(const struct cb *cb, cb_offset_t node_offset)
 {
     struct cb_bst_node *node;
     char *str, *keystr, *valstr, *leftstr, *rightstr;
