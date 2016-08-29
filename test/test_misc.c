@@ -102,7 +102,7 @@ wtf2(void)
 
 
 static void
-test_power_of_2_size_gt()
+test_power_of_2_size_gt(void)
 {
     printf("power_of_2_size_gt(%zu): %zu\n", (size_t)0, power_of_2_size_gt(0));
     printf("power_of_2_size_gt_simple(%zu): %zu\n", (size_t)0, power_of_2_size_gt_simple(0));

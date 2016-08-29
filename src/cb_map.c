@@ -703,19 +703,19 @@ static bool cb_bst_validate(const struct cb *cb, cb_offset_t node_offset,
     /* If that failed, go through again with printing of problems. */
     if (!sequence_ok)
     {
-        cb_log_debug("BEGIN ERROR PRINT OF SEQUENCE %s",
+        cb_log_error("BEGIN ERROR PRINT OF SEQUENCE %s",
                      name == NULL ? "" : name);
         cb_bst_validate_sequence(cb, node_offset, true);
-        cb_log_debug("END   ERROR PRINT OF SEQUENCE %s",
+        cb_log_error("END   ERROR PRINT OF SEQUENCE %s",
                      name == NULL ? "" : name);
     }
 
     if (!structure_ok)
     {
-        cb_log_debug("BEGIN ERROR PRINT OF STRUCTURE %s",
+        cb_log_error("BEGIN ERROR PRINT OF STRUCTURE %s",
                      name == NULL ? "" : name);
         cb_bst_validate_internal(cb, node_offset, &tree_height, 0, true);
-        cb_log_debug("END   ERROR PRINT OF STRUCTURE %s",
+        cb_log_error("END   ERROR PRINT OF STRUCTURE %s",
                      name == NULL ? "" : name);
     }
 
@@ -973,6 +973,8 @@ static void cb_bst_print_delete(const struct cb            *cb,
 static bool cb_bst_delete_state_validate(struct cb                  *cb,
                                          struct cb_bst_delete_state *s)
 {
+    (void)cb, (void)s;
+
     assert(s->grandparent_node_offset == CB_BST_SENTINEL ||
            cb_bst_node_at(cb, s->grandparent_node_offset)->child[
                s->grandparent_to_parent_dir] == s->parent_node_offset);
@@ -1656,8 +1658,7 @@ static int cb_bst_delete_case1(struct cb                  **cb,
 
 
 static int cb_bst_delete_case2(struct cb                  **cb,
-                               struct cb_bst_delete_state  *s,
-                               const struct cb_key         *key)
+                               struct cb_bst_delete_state  *s)
 {
 
     /*
@@ -2355,7 +2356,7 @@ entry:
         if (cb_bst_node_is_red(*cb,
                 cb_bst_node_at(*cb, s.sibling_node_offset)->child[s.parent_to_curr_dir]))
         {
-            ret = cb_bst_delete_case2(cb, &s, key);
+            ret = cb_bst_delete_case2(cb, &s);
             if (ret != 0)
                 goto fail;
 
@@ -2688,6 +2689,8 @@ static int traversal_delete(const struct cb_key   *k,
 {
     struct traverse_state *ts = closure;
     int ret;
+
+    (void)v;
 
     ret = cb_bst_delete(ts->cb,
                         &(ts->new_root_node_offset),

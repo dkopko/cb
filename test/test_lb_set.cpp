@@ -10,7 +10,7 @@
 #define DEFAULT_SEED         0
 
 
-struct cb_lb_entry *
+static struct cb_lb_entry *
 derive_lowest_entry(struct cb_lb_entry *entries, uint64_t count)
 {
     struct cb_lb_entry *lowest_entry = NULL;
@@ -30,7 +30,7 @@ derive_lowest_entry(struct cb_lb_entry *entries, uint64_t count)
 }
 
 
-int
+static int
 entrysort(const void *lhs, const void *rhs)
 {
     const struct cb_lb_entry *lhs_e = (const struct cb_lb_entry *)lhs;

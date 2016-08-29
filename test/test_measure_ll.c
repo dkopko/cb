@@ -49,6 +49,7 @@ int main(int argc, char **argv)
         f(&entry);
     }
     t3 = getticks();
+    (void)t2, (void)t3;
 
     //events_per_second = (ITERS / (double)(t1 - t0 - (t3 - t2))) * ticks_per_second;
     events_per_second = (ITERS / (double)(t1 - t0)) * ticks_per_second;

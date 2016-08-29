@@ -2,7 +2,7 @@
 #include "cb.h"
 #include "cb_structmap.h"
 
-void
+static void
 test_structmap(struct cb **cb)
 {
     cb_offset_t structmap_root = CB_STRUCTMAP_SENTINEL;
@@ -10,6 +10,8 @@ test_structmap(struct cb **cb)
     cb_offset_t v1 = 444,
                 v2 = 444;
     int ret;
+
+    (void)ret;
 
     cb_structmap_insert(cb, &structmap_root, 0, 0,            123);
     cb_structmap_insert(cb, &structmap_root, 0, UINT64_MAX/2, 456);

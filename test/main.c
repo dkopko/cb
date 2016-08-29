@@ -3,7 +3,8 @@
 #include "cb_map.h"
 
 
-void test_alignments(void)
+static void
+test_alignments(void)
 {
 #if 0
     for (unsigned int i = 0; i < 100; ++i)
@@ -22,7 +23,8 @@ void test_alignments(void)
 }
 
 
-void test_raw_append(struct cb *cb)
+static void
+test_raw_append(struct cb *cb)
 {
     for (int i = 0; i < 50000; ++i)
     {
@@ -34,7 +36,8 @@ void test_raw_append(struct cb *cb)
 }
 
 
-void test_kv_set(struct cb **cb)
+static void
+test_kv_set(struct cb **cb)
 {
     struct cb_map cb_map;
     int ret;
@@ -89,7 +92,8 @@ void test_kv_set(struct cb **cb)
 }
 
 
-void test_bst(struct cb **cb)
+static void
+test_bst(struct cb **cb)
 {
     struct cb_map cb_map;
     struct cb_key key;
@@ -132,7 +136,8 @@ void test_bst(struct cb **cb)
 }
 
 
-int doprint(const struct cb_key *k, const struct cb_value *v, void *closure)
+static int
+doprint(const struct cb_key *k, const struct cb_value *v, void *closure)
 {
     int ret;
 
@@ -144,7 +149,8 @@ int doprint(const struct cb_key *k, const struct cb_value *v, void *closure)
 }
 
 
-void test_bst2(struct cb **cb)
+static void
+test_bst2(struct cb **cb)
 {
     //An exhaustive depth 4 tree.
     //int keys[] = { 15, 13, 11, 9, 7, 5, 3, 1, 14, 10, 6, 2, 12, 4, 8 };

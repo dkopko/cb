@@ -521,13 +521,15 @@ struct known_set
 typedef struct known_set known_set_t;
 
 
-void known_set_init(known_set_t *ks, size_t prealloc_count)
+static void
+known_set_init(known_set_t *ks, size_t prealloc_count)
 {
     ks->keys_vec.reserve(prealloc_count);
 }
 
 
-size_t known_set_count(known_set_t *ks)
+static size_t
+known_set_count(known_set_t *ks)
 {
     if (ks->keys_map.size() != ks->keys_vec.size())
         cb_log_debug("DANDEBUG WTF %zu %zu", ks->keys_map.size(), ks->keys_vec.size());
@@ -537,13 +539,15 @@ size_t known_set_count(known_set_t *ks)
 }
 
 
-bool known_set_contains(known_set_t *ks, uint64_t k)
+static bool
+known_set_contains(known_set_t *ks, uint64_t k)
 {
     return ks->keys_map.find(k) != ks->keys_map.end();
 }
 
 
-void known_set_insert(known_set_t *ks, uint64_t k)
+static void
+known_set_insert(known_set_t *ks, uint64_t k)
 {
     size_t set_count = known_set_count(ks);;
 
@@ -555,7 +559,8 @@ void known_set_insert(known_set_t *ks, uint64_t k)
 }
 
 
-void known_set_remove(known_set_t *ks, uint64_t k)
+static void
+known_set_remove(known_set_t *ks, uint64_t k)
 {
     std::vector<uint64_t>::size_type k_pos;
     uint64_t last_k;
@@ -574,14 +579,16 @@ void known_set_remove(known_set_t *ks, uint64_t k)
 }
 
 
-uint64_t known_set_get_random(known_set_t *ks, struct cb_random_state *rs)
+static uint64_t
+known_set_get_random(known_set_t *ks, struct cb_random_state *rs)
 {
     assert(known_set_count(ks) > 0);
     return ks->keys_vec[cb_random_next_range(rs, known_set_count(ks))];
 }
 
 
-void print_event(struct event *e)
+static void
+print_event(struct event *e)
 {
     printf("%ju ", (uintmax_t)(e->t1 - e->t0));
 
@@ -733,9 +740,10 @@ generate_random_events(struct event           *events,
 }
 
 
-void print_vector_hist(char const                  *map_name,
-                       char const                  *event_name,
-                       std::vector<uint64_t> const *vec)
+static void
+print_vector_hist(char const                  *map_name,
+                  char const                  *event_name,
+                  std::vector<uint64_t> const *vec)
 {
     std::map<uint64_t, uint64_t> hist;
     //static const uint64_t bucket_width = 100; /*ticks*/
@@ -761,9 +769,10 @@ void print_vector_hist(char const                  *map_name,
 }
 
 
-void print_vector_stats(char const                  *map_name,
-                        char const                  *event_name,
-                        std::vector<uint64_t> const *vec)
+static void
+print_vector_stats(char const                  *map_name,
+                   char const                  *event_name,
+                   std::vector<uint64_t> const *vec)
 {
     std::vector<uint64_t> sorted_vec(*vec);
     double sum = 0.0, sum_squared = 0.0;

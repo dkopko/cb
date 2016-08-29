@@ -22,8 +22,8 @@ include_directories(
 #FIXME -DCB_VERBOSE
 #FIXME -DCB_HEAVY_ASSERT
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -D_GNU_SOURCE -Wall -Wextra -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-function")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -D_GNU_SOURCE -Wall -Wextra -Wmissing-declarations -Wno-unused-function")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -D_GNU_SOURCE -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-function")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -D_GNU_SOURCE -Wall -Wextra -Werror -Wmissing-declarations -Wno-unused-function")
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")

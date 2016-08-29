@@ -198,6 +198,8 @@ CB_INLINE cb_offset_t offset_aligned_gte(cb_offset_t start, size_t alignment)
 
 CB_INLINE void cb_validate(const struct cb *cb)
 {
+    (void)cb;
+
     assert(cb->page_size != 0);
     assert(is_power_of_2_size(cb->page_size));
 
