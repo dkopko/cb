@@ -18,17 +18,33 @@ include_directories(
   "${CMAKE_SOURCE_DIR}/src"
 )
 
-set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
-set(CMAKE_LDFLAGS_COVERAGE "${CMAKE_LDFLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
+#Q: What targets should include the following?
+#FIXME -DCB_VERBOSE
+#FIXME -DCB_HEAVY_ASSERT
 
-set(CB_CFLAGS "-std=c99 -Wall -Wno-unused-function -g -mtune=native -D_GNU_SOURCE -Werror=strict-prototypes -Werror=old-style-definition -Werror=missing-prototypes ${COVERAGE_CFLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -D_GNU_SOURCE -Wall -Wextra -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-function")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -D_GNU_SOURCE -Wall -Wextra -Wmissing-declarations -Wno-unused-function")
+
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -mtune=native")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mtune=native")
+
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -mtune=native")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -mtune=native")
+
+set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -mtune=native")
+set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -mtune=native")
+
+set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_COVERAGE} -O0 -g -fprofile-arcs -ftest-coverage")
+set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} -O0 -g -fprofile-arcs -ftest-coverage")
+set(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
 
 
 add_library(libcb_static STATIC ${CB_SOURCES})
 set_target_properties(libcb_static PROPERTIES
     OUTPUT_NAME cb
-    COMPILE_FLAGS ${CB_CFLAGS}
     LINKER_LANGUAGE C
 )
 install(TARGETS libcb_static DESTINATION lib)
