@@ -2,22 +2,8 @@
 
 ## Building
 
-### Debug Build
-
 ```
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Debug
-make
-```
-
-### Release Build
-
-```
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
-make
+./build.sh
 ```
 
 ### Test Coverage
