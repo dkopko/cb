@@ -1,0 +1,169 @@
+Command: ./test_measure --impl cbmap --ratios 9,0,0,5 --seed 16010
+cases: 530752, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,0 --seed 1704
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 3,0,0,8 --seed 24033
+cases: 38912, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 5,0,0,2 --seed 5664
+cases: 445883, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 4,0,0,5 --seed 22401
+cases: 113955, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 2,0,0,3 --seed 17664
+cases: 79888, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 4,0,0,8 --seed 26229
+cases: 53967, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 0,0,0,7 --seed 18318
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 1,0,0,7 --seed 30250
+cases: 14420, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 9,0,0,5 --seed 13239
+cases: 531669, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 1,0,0,2 --seed 9416
+cases: 54740, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 0,0,0,5 --seed 27904
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,4 --seed 5925
+cases: 537572, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,4 --seed 16728
+cases: 540300, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 3,0,0,8 --seed 23856
+cases: 38587, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,4 --seed 1638
+cases: 537810, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 0,0,0,0 --seed 8383
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 6,0,0,2 --seed 13921
+cases: 395590, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 2,0,0,5 --seed 14323
+cases: 40891, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 1,0,0,7 --seed 22007
+cases: 14366, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 8,0,0,5 --seed 5450
+cases: 561267, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 5,0,0,3 --seed 6814
+cases: 550580, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 1,0,0,0 --seed 20795
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 5,0,0,5 --seed 24735
+cases: 437124, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 1,0,0,1 --seed 18697
+cases: 371308, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 1,0,0,1 --seed 32190
+cases: 393707, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 6,0,0,8 --seed 1425
+cases: 100381, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 5,0,0,8 --seed 5812
+cases: 72715, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,3 --seed 11699
+cases: 463479, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 9,0,0,0 --seed 29572
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 6,0,0,7 --seed 5611
+cases: 137277, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 8,0,0,4 --seed 5732
+cases: 504800, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 8,0,0,4 --seed 31532
+cases: 503359, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 6,0,0,8 --seed 26894
+cases: 99335, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 3,0,0,3 --seed 5065
+cases: 375469, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 9,0,0,4 --seed 27434
+cases: 472997, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 5,0,0,1 --seed 13647
+cases: 271995, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,4 --seed 7705
+cases: 538747, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,3 --seed 6586
+cases: 466664, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 0,0,0,6 --seed 24963
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 8,0,0,2 --seed 9898
+cases: 321736, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 2,0,0,6 --seed 6028
+cases: 34265, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,5 --seed 513
+cases: 586543, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 5,0,0,1 --seed 32257
+cases: 268668, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,7 --seed 19128
+cases: 358604, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 5,0,0,6 --seed 24802
+cases: 124068, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 0,0,0,9 --seed 21871
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 9,0,0,8 --seed 3661
+cases: 579476, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 9,0,0,9 --seed 31976
+cases: 430064, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 4,0,0,0 --seed 13519
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 2,0,0,8 --seed 17686
+cases: 25536, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 0,0,0,3 --seed 7747
+cases: 0, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,1 --seed 19388
+cases: 206316, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 8,0,0,5 --seed 19778
+cases: 560127, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 7,0,0,8 --seed 17753
+cases: 141035, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 5,0,0,1 --seed 19134
+cases: 271239, ret: 0
+
+Command: ./test_measure --impl cbmap --ratios 8,0,0,2 --seed 30335
