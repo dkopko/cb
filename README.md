@@ -6,16 +6,12 @@ Magic ring buffers and persistent data structures.
 ## Building
 
 ```
-./build.sh
+make
 ```
 
 ## Test Coverage
 
 ```
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Coverage
-make
 lcov --directory . --zerocounters --rc lcov_branch_coverage=1
 ```
 
