@@ -69,8 +69,13 @@ function do_coverage_tests()
 
     # Produce coverage webpages.
     lcov --directory "${BUILD_ROOT}"/Coverage --capture --output-file "${TEST_ROOT}"/coverage.info --rc lcov_branch_coverage=1
-    lcov --remove "${TEST_ROOT}"/coverage.info '/usr/*' --output-file "${TEST_ROOT}"/coverage.info.cleaned --rc lcov_branch_coverage=1
+    lcov --remove "${TEST_ROOT}"/coverage.info '/usr/*' '*/external/*' '*/test/*' --output-file "${TEST_ROOT}"/coverage.info.cleaned --rc lcov_branch_coverage=1
     genhtml -o "${TEST_ROOT}"/coverage "${TEST_ROOT}"/coverage.info.cleaned --rc lcov_branch_coverage=1
+    {
+        lcov -l "${TEST_ROOT}"/coverage.info.cleaned
+        echo
+        lcov --summary "${TEST_ROOT}"/coverage.info.cleaned
+    } 2>&1 | grep -v coverage.info.cleaned >"${TEST_ROOT}"/coverage_summary
 
     # Clear coverage data to have not disrupted contents of BUILD_ROOT/Coverage.
     lcov --directory "${BUILD_ROOT}"/Coverage --zerocounters --rc lcov_branch_coverage=1
@@ -96,6 +101,7 @@ function generate_toplevel_html()
             CB Tests performed on ${TEST_NAME}.
             <br>
             <a href="coverage/index.html">Coverage Results</a>
+            <pre>$(cat "${TEST_ROOT}"/coverage_summary)</pre>
         </body>
         </html>
 EOF
