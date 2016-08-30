@@ -27,6 +27,16 @@ EOF
 }
 
 
+function save_git_state()
+{
+    pushd "${PROJECT_ROOT}"
+
+    git rev-parse HEAD >"${TEST_ROOT}"/git_commit
+    git diff >"${TEST_ROOT}"/patch
+
+    popd
+}
+
 function update_symlink_latest()
 {
     pushd "${TESTRUNS_ROOT}"
@@ -142,7 +152,12 @@ fi
 [[ ! -d "${TESTRUNS_ROOT}" ]] && mkdir "${TESTRUNS_ROOT}"
 [[ ! -d "${TEST_ROOT}" ]] && mkdir "${TEST_ROOT}"
 
+
+# Update symlinks
 update_symlink_latest
+
+#Save git state
+save_git_state
 
 # Perform tests.
 do_coverage_tests
