@@ -175,20 +175,6 @@ function generate_map_latency_plots()
 }
 
 
-function generate_release_measurements()
-{
-    local outfile="${SUITE_ROOT}/release_measurements.out"
-
-    pushd "${SUITE_ROOT}"
-
-    "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 >"${outfile}" 2>&1
-
-    remove_mapfiles
-
-    popd
-}
-
-
 function generate_toplevel_html()
 {
     pushd "${SUITE_ROOT}"
@@ -260,9 +246,6 @@ generate_map_flamegraphs
 
 # Generate map latency plots.
 generate_map_latency_plots
-
-# Generate release-build measurements.
-generate_release_measurements
 
 # Generate HTML entry point.
 generate_toplevel_html
