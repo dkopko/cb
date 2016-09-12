@@ -10,8 +10,8 @@ BUILD_ROOT="${BUILD_ROOT:-${PROJECT_ROOT}/BUILD}"
 TESTRUNS_ROOT="${TESTRUNS_ROOT:-${PROJECT_ROOT}/TESTRUNS}"
 SHOW_PROG="${SHOW_PROG:-xdg-open}"
 
-TEST_NAME="$(date +'%Y%m%d-%H%M%S')"
-TEST_ROOT="${TESTRUNS_ROOT}/${TEST_NAME}"
+RUN_NAME="$(date +'%Y%m%d-%H%M%S')"
+SUITE_ROOT="${TESTRUNS_ROOT}/${RUN_NAME}"
 DO_SHOW=no
 HAS_UNKNOWN_ARG=no
 
@@ -31,8 +31,8 @@ function save_git_state()
 {
     pushd "${PROJECT_ROOT}"
 
-    git rev-parse HEAD >"${TEST_ROOT}"/git_commit
-    git diff >"${TEST_ROOT}"/patch
+    git rev-parse HEAD >"${SUITE_ROOT}"/git_commit
+    git diff >"${SUITE_ROOT}"/patch
 
     popd
 }
@@ -41,7 +41,7 @@ function update_symlink_latest()
 {
     pushd "${TESTRUNS_ROOT}"
 
-    ln -fsT "${TEST_NAME}" latest
+    ln -fsT "${RUN_NAME}" latest
 
     popd
 }
@@ -52,7 +52,7 @@ function update_symlink_latest_success()
     pushd "${TESTRUNS_ROOT}"
 
     [[ -h "latest_success" ]] && mv latest_success previous_success
-    ln -fsT "${TEST_NAME}" latest_success
+    ln -fsT "${RUN_NAME}" latest_success
 
     popd
 }
@@ -60,7 +60,7 @@ function update_symlink_latest_success()
 
 function remove_mapfiles()
 {
-    pushd "${TEST_ROOT}"
+    pushd "${SUITE_ROOT}"
 
     rm map-*-*
 
@@ -70,7 +70,14 @@ function remove_mapfiles()
 
 function do_coverage_tests()
 {
-    pushd "${TEST_ROOT}"
+    local test_root="${SUITE_ROOT}/coverage_tests"
+    local coverage_file="${test_root}/coverage.info"
+    local cleaned_coverage_file="${test_root}/coverage.info.cleaned"
+    local coverage_html_root="${test_root}/coverage_html"
+    local coverage_summary_file="${test_root}/coverage_summary"
+
+    mkdir "${test_root}"
+    pushd "${test_root}"
 
     # Clear coverage data. (Apparently *.gcda coverage files are generated
     # alongside the binaries, which is sloppy.)
@@ -80,19 +87,19 @@ function do_coverage_tests()
     "${BUILD_ROOT}"/Coverage/test_measure
 
     # Produce coverage webpages.
-    lcov --directory "${BUILD_ROOT}"/Coverage --capture --output-file "${TEST_ROOT}"/coverage.info --rc lcov_branch_coverage=1
-    lcov --remove "${TEST_ROOT}"/coverage.info '/usr/*' '*/external/*' '*/test/*' --output-file "${TEST_ROOT}"/coverage.info.cleaned --rc lcov_branch_coverage=1
-    genhtml -o "${TEST_ROOT}"/coverage "${TEST_ROOT}"/coverage.info.cleaned --rc lcov_branch_coverage=1
+    lcov --directory "${BUILD_ROOT}"/Coverage --capture --output-file "${coverage_file}" --rc lcov_branch_coverage=1
+    lcov --remove "${coverage_file}" '/usr/*' '*/external/*' '*/test/*' --output-file "${cleaned_coverage_file}" --rc lcov_branch_coverage=1
+    genhtml -o "${coverage_html_root}" "${cleaned_coverage_file}" --rc lcov_branch_coverage=1
     {
-        lcov -l "${TEST_ROOT}"/coverage.info.cleaned
+        lcov -l "${cleaned_coverage_file}"
         echo
-        lcov --summary "${TEST_ROOT}"/coverage.info.cleaned
-    } 2>&1 | grep -v coverage.info.cleaned >"${TEST_ROOT}"/coverage_summary
+        lcov --summary "${cleaned_coverage_file}"
+    } 2>&1 |grep -v coverage.info.cleaned >"${coverage_summary_file}"
 
     # Clear coverage data to have not disrupted contents of BUILD_ROOT/Coverage.
     lcov --directory "${BUILD_ROOT}"/Coverage --zerocounters --rc lcov_branch_coverage=1
 
-    remove_mapfiles
+    rm map-*-*
 
     popd 
 }
@@ -106,12 +113,12 @@ function _exclude_kernel()
 
 function generate_map_flamegraphs()
 {
-    local subtest_root="${TEST_ROOT}/map_flamegraphs"
-    local outfile="${subtest_root}/generate_map_flamegraphs.out"
-    local stdmap_flamegraph="${subtest_root}/stdmap_flame.svg"
-    local cbbst_flamegraph="${subtest_root}/cbbst_flame.svg"
-    local cbmap_flamegraph="${subtest_root}/cbmap_flame.svg"
-    local foldedfile="${subtest_root}/folded.tmp"
+    local test_root="${SUITE_ROOT}/map_flamegraphs"
+    local outfile="${test_root}/generate_map_flamegraphs.out"
+    local stdmap_flamegraph="${test_root}/stdmap_flame.svg"
+    local cbbst_flamegraph="${test_root}/cbbst_flame.svg"
+    local cbmap_flamegraph="${test_root}/cbmap_flame.svg"
+    local foldedfile="${test_root}/folded.tmp"
 
     if [[ -z "$(which flamegraph.pl)" || -z "$(which stackcollapse-perf.pl)" ]]
     then
@@ -119,8 +126,8 @@ function generate_map_flamegraphs()
         return 1
     fi
 
-    mkdir "${subtest_root}"
-    pushd "${subtest_root}"
+    mkdir "${test_root}"
+    pushd "${test_root}"
 
     perf record -F 1000 -a -g -- \
         "${BUILD_ROOT}"/Debug/test_measure --ring-size=134217728 >"${outfile}" 2>&1
@@ -143,7 +150,7 @@ function generate_map_flamegraphs()
         grep -v cb_map_consolidate |
         flamegraph.pl >"${cbmap_flamegraph}"
 
-    rm "${subtest_root}"/map-*-*
+    rm "${test_root}"/map-*-*
     rm "${foldedfile}"
 
     popd
@@ -152,9 +159,9 @@ function generate_map_flamegraphs()
 
 function generate_release_measurements()
 {
-    local outfile="${TEST_ROOT}/release_measurements.out"
+    local outfile="${SUITE_ROOT}/release_measurements.out"
 
-    pushd "${TEST_ROOT}"
+    pushd "${SUITE_ROOT}"
 
     "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 >"${outfile}" 2>&1
 
@@ -166,24 +173,24 @@ function generate_release_measurements()
 
 function generate_toplevel_html()
 {
-    pushd "${TEST_ROOT}"
+    pushd "${SUITE_ROOT}"
 
     {
 	cat <<EOF
         <!doctype html>
         <html>
         <head>
-        <title>CB Test Run ${TEST_NAME}</title>
+        <title>CB Test Run ${RUN_NAME}</title>
         </head>
         <body>
-            CB Tests performed on ${TEST_NAME}.
+            CB Tests performed on ${RUN_NAME}.
             <br>
-            <a href="coverage/index.html">Coverage Results</a>
-            <pre>$(cat "${TEST_ROOT}"/coverage_summary)</pre>
+            <a href="coverage_tests/coverage_html/index.html">Coverage Results</a>
+            <pre>$(cat "${SUITE_ROOT}/coverage_tests/coverage_summary")</pre>
         </body>
         </html>
 EOF
-    } >"${TEST_ROOT}/index.html"
+    } >"${SUITE_ROOT}/index.html"
 
 
     popd
@@ -218,10 +225,10 @@ fi
 
 # Prepare directory for output of tests.
 [[ ! -d "${TESTRUNS_ROOT}" ]] && mkdir "${TESTRUNS_ROOT}"
-[[ ! -d "${TEST_ROOT}" ]] && mkdir "${TEST_ROOT}"
+[[ ! -d "${SUITE_ROOT}" ]] && mkdir "${SUITE_ROOT}"
 
 
-# Update '${TEST_ROOT}/latest' symlink.
+# Update '${TESTRUNS_ROOT}/latest' symlink.
 update_symlink_latest
 
 #Save git state.
@@ -239,12 +246,12 @@ generate_release_measurements
 # Generate HTML entry point.
 generate_toplevel_html
 
-# Update '${TEST_ROOT}/latest_success' symlink.
+# Update '${TESTRUNS_ROOT}/latest_success' symlink.
 update_symlink_latest_success
 
 # Show test report if requested.
 if [[ "${DO_SHOW}" == "yes" ]]
 then
-    "${SHOW_PROG}" "${TEST_ROOT}"/index.html
+    "${SHOW_PROG}" "${SUITE_ROOT}"/index.html
 fi
 
