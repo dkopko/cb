@@ -4,6 +4,7 @@
 set -o nounset
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." ; pwd)"
+SCRIPTS_ROOT="${PROJECT_ROOT}/scripts"
 
 #Overrideable settings
 BUILD_ROOT="${BUILD_ROOT:-${PROJECT_ROOT}/BUILD}"
@@ -157,6 +158,23 @@ function generate_map_flamegraphs()
 }
 
 
+function generate_map_latency_plots()
+{
+    local test_root="${SUITE_ROOT}/map_latency"
+    local outfile="${test_root}/out"
+
+    mkdir "${test_root}"
+    pushd "${test_root}"
+
+    "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 >"${outfile}" 2>&1
+    "${SCRIPTS_ROOT}/plot_measure.py" "${outfile}"
+
+    rm "${test_root}"/map-*-*
+
+    popd
+}
+
+
 function generate_release_measurements()
 {
     local outfile="${SUITE_ROOT}/release_measurements.out"
@@ -234,11 +252,14 @@ update_symlink_latest
 #Save git state.
 save_git_state
 
-# Perform tests.
+# Perform tests for coverage.
 do_coverage_tests
 
 # Generate map flamegraphs.
 generate_map_flamegraphs
+
+# Generate map latency plots.
+generate_map_latency_plots
 
 # Generate release-build measurements.
 generate_release_measurements
