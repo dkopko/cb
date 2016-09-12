@@ -40,7 +40,9 @@ function save_git_state()
 function update_symlink_latest()
 {
     pushd "${TESTRUNS_ROOT}"
+
     ln -fsT "${TEST_NAME}" latest
+
     popd
 }
 
@@ -93,6 +95,72 @@ function do_coverage_tests()
     remove_mapfiles
 
     popd 
+}
+
+
+function _exclude_kernel()
+{ 
+    sed -e 's/;[^;]*_\[k\]//g'
+}
+
+
+function generate_map_flamegraphs()
+{
+    local subtest_root="${TEST_ROOT}/map_flamegraphs"
+    local outfile="${subtest_root}/generate_map_flamegraphs.out"
+    local stdmap_flamegraph="${subtest_root}/stdmap_flame.svg"
+    local cbbst_flamegraph="${subtest_root}/cbbst_flame.svg"
+    local cbmap_flamegraph="${subtest_root}/cbmap_flame.svg"
+    local foldedfile="${subtest_root}/folded.tmp"
+
+    if [[ -z "$(which flamegraph.pl)" || -z "$(which stackcollapse-perf.pl)" ]]
+    then
+        echo "Skipping generate_map_flamegraphs() because FlameGraph scripts not present." 1>&2
+        return 1
+    fi
+
+    mkdir "${subtest_root}"
+    pushd "${subtest_root}"
+
+    perf record -F 1000 -a -g -- \
+        "${BUILD_ROOT}"/Debug/test_measure --ring-size=134217728 >"${outfile}" 2>&1
+    perf script |stackcollapse-perf.pl --kernel >"${foldedfile}"
+    gzip perf.data
+
+    cat "${foldedfile}" |
+        _exclude_kernel |
+        fgrep stdmap_handle_events |
+        flamegraph.pl >"${stdmap_flamegraph}"
+
+    cat "${foldedfile}" |
+        _exclude_kernel |
+        fgrep cbbst_handle_events |
+        flamegraph.pl >"${cbbst_flamegraph}"
+
+    cat "${foldedfile}" |
+        _exclude_kernel |
+        fgrep cbmap_handle_events |
+        grep -v cb_map_consolidate |
+        flamegraph.pl >"${cbmap_flamegraph}"
+
+    rm "${subtest_root}"/map-*-*
+    rm "${foldedfile}"
+
+    popd
+}
+
+
+function generate_release_measurements()
+{
+    local outfile="${TEST_ROOT}/release_measurements.out"
+
+    pushd "${TEST_ROOT}"
+
+    "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 >"${outfile}" 2>&1
+
+    remove_mapfiles
+
+    popd
 }
 
 
@@ -153,19 +221,25 @@ fi
 [[ ! -d "${TEST_ROOT}" ]] && mkdir "${TEST_ROOT}"
 
 
-# Update symlinks
+# Update '${TEST_ROOT}/latest' symlink.
 update_symlink_latest
 
-#Save git state
+#Save git state.
 save_git_state
 
 # Perform tests.
 do_coverage_tests
 
+# Generate map flamegraphs.
+generate_map_flamegraphs
+
+# Generate release-build measurements.
+generate_release_measurements
+
 # Generate HTML entry point.
 generate_toplevel_html
 
-# Update symlinks
+# Update '${TEST_ROOT}/latest_success' symlink.
 update_symlink_latest_success
 
 # Show test report if requested.
