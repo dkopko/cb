@@ -85,7 +85,7 @@ function do_coverage_tests()
     lcov --directory "${BUILD_ROOT}"/Coverage --zerocounters --rc lcov_branch_coverage=1
 
     # Run tests
-    "${BUILD_ROOT}"/Coverage/test_measure
+    "${BUILD_ROOT}"/Coverage/test_measure >/dev/null 2>&1
 
     # Produce coverage webpages.
     lcov --directory "${BUILD_ROOT}"/Coverage --capture --output-file "${coverage_file}" --rc lcov_branch_coverage=1
@@ -249,10 +249,13 @@ then
 fi
 
 
+# Ensure builds are up to date.
+cd "${PROJECT_ROOT}"
+make -j4
+
 # Prepare directory for output of tests.
 [[ ! -d "${TESTRUNS_ROOT}" ]] && mkdir "${TESTRUNS_ROOT}"
 [[ ! -d "${SUITE_ROOT}" ]] && mkdir "${SUITE_ROOT}"
-
 
 # Update '${TESTRUNS_ROOT}/latest' symlink.
 update_symlink_latest
