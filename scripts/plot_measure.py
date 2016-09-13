@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+
+# Copyright 2016 Daniel Kopko.
+
 import math
 import random
 import numpy
@@ -7,8 +10,7 @@ from matplotlib import pyplot
 
 """
 TODO
-* Move key elsewhere
-* Output a picture file
+* Move legend elsewhere
 * Boxplot option
 * Array generator to replace .extend() call?
 """
@@ -21,12 +23,15 @@ impl_measures = { }
 
 with open(filename,'r') as f:
     for x in f:
+        # Skip empty lines:
         x = x.rstrip()
         if not x:
             continue
+        # Skip lines not beginning with 'HIST':
         y = x.split(' ')
         if y[0] != 'HIST':
             continue
+        # Parse line format: 'HIST' <impl> <op> <bucket> <count>:
         impl = y[1]
         op = y[2]
         bucket = numpy.int(y[3])
@@ -44,11 +49,15 @@ with open(filename,'r') as f:
 """
 Layout.
 """
-rows=len(known_ops)
-cols=1
-fig, axes = pyplot.subplots(nrows=rows, ncols=cols, figsize=(8.5, 11), sharex=True, sharey=True)
+rows = len(known_ops)
+cols = 1
+fig, axes = pyplot.subplots(nrows=rows, ncols=cols, sharex=True, sharey=True)
 
 
+"""
+Determine the min and max across all operations, to be used for unifying all
+graphing.
+"""
 maxs = []
 mins = []
 for op in known_ops.keys():
@@ -58,6 +67,13 @@ for op in known_ops.keys():
         mins.append(min(x))
 bins = numpy.logspace(0.1, numpy.log10(max(maxs)), 500)
 
+
+"""
+For each operation type, graph each implementation as a histogram.  We use
+a symlog on the y axis because some bins will have a zero count.
+(I'd really like to overlay a boxplot on each of these histograms, but figuring
+ out how to do this in matplotlib has been a fucking nightmare.)
+"""
 i = 0
 for op in sorted(known_ops.keys()):
     ax = axes[i]
@@ -65,18 +81,17 @@ for op in sorted(known_ops.keys()):
     ax.set_xscale("log")
     ax.set_yscale("symlog", linthreshy=10.0)
     ax.grid()
-    """
-    Histogram
-    """
+    # Histogram
     for impl in known_impls.keys():
         ax.hist(impl_measures[impl][op], bins=bins, label=impl, histtype='step')
-    """
-    Boxplot
-    ax.boxplot([impl_measures[im][op] for im in known_impls.keys()], notch=True, vert=False, whis=[0, 99], labels=known_impls.keys())
-    ax.set_xlim(left=1)
-    """
+    # Boxplot
+    #ax2 = axes[i*2+1]
+    #ax2.boxplot([impl_measures[im][op] for im in known_impls.keys()], notch=True, vert=False, whis=[0, 99], labels=known_impls.keys())
+    #ax2.set_xlim(left=1)
     i=i+1
 
+pyplot.legend(loc='best')
 pyplot.tight_layout()
-pyplot.legend()
-pyplot.show()
+pyplot.savefig("figure.png")
+pyplot.savefig("figure.svg")
+#pyplot.show()
