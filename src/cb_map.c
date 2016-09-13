@@ -194,16 +194,20 @@ enum
 };
 
 
-static bool cb_bst_validate(const struct cb *cb, cb_offset_t node_offset,
-                            const char *name);
+static bool
+cb_bst_validate(const struct cb *cb,
+                cb_offset_t      node_offset,
+                const char      *name);
 
-static int cb_map_traverse_internal(const struct cb        *cb,
-                                    cb_offset_t             root_node_offset,
-                                    cb_map_traverse_func_t  func,
-                                    void                   *closure);
+static int
+cb_map_traverse_internal(const struct cb        *cb,
+                         cb_offset_t             root_node_offset,
+                         cb_map_traverse_func_t  func,
+                         void                   *closure);
 
 
-static int cb_key_cmp(const struct cb_key *lhs, const struct cb_key *rhs)
+static int
+cb_key_cmp(const struct cb_key *lhs, const struct cb_key *rhs)
 {
     if (lhs->k < rhs->k) return -1;
     if (lhs->k > rhs->k) return 1;
@@ -211,13 +215,15 @@ static int cb_key_cmp(const struct cb_key *lhs, const struct cb_key *rhs)
 }
 
 
-static void cb_key_assign(struct cb_key *lhs, const struct cb_key *rhs)
+static void
+cb_key_assign(struct cb_key *lhs, const struct cb_key *rhs)
 {
     lhs->k = rhs->k;
 }
 
 
-static void cb_value_assign(struct cb_value *lhs, const struct cb_value *rhs)
+static void
+cb_value_assign(struct cb_value *lhs, const struct cb_value *rhs)
 {
     lhs->v = rhs->v;
 }
@@ -236,9 +242,10 @@ struct cb_command_any
 };
 
 
-static int cb_command_alloc(struct cb             **cb,
-                            cb_offset_t            *command_offset,
-                            struct cb_command_any **command)
+static int
+cb_command_alloc(struct cb             **cb,
+                 cb_offset_t            *command_offset,
+                 struct cb_command_any **command)
 {
     cb_offset_t new_command_offset;
     int ret;
@@ -257,7 +264,8 @@ static int cb_command_alloc(struct cb             **cb,
 }
 
 
-static int cb_start_data_set(struct cb_map *cb_map)
+static int
+cb_start_data_set(struct cb_map *cb_map)
 {
     cb_offset_t command_offset;
     struct cb_command_any *command;
@@ -276,8 +284,9 @@ static int cb_start_data_set(struct cb_map *cb_map)
 }
 
 
-static int cb_bst_node_alloc(struct cb          **cb,
-                             cb_offset_t         *node_offset)
+static int
+cb_bst_node_alloc(struct cb   **cb,
+                  cb_offset_t  *node_offset)
 {
     cb_offset_t new_node_offset;
     int ret;
@@ -295,8 +304,9 @@ static int cb_bst_node_alloc(struct cb          **cb,
 }
 
 
-static inline struct cb_bst_node* cb_bst_node_at(const struct cb *cb,
-                                                 cb_offset_t      node_offset)
+static inline struct cb_bst_node*
+cb_bst_node_at(const struct cb *cb,
+               cb_offset_t      node_offset)
 {
     if (node_offset == CB_BST_SENTINEL)
         return NULL;
@@ -311,10 +321,11 @@ static inline struct cb_bst_node* cb_bst_node_at(const struct cb *cb,
  *  If not found, iter->finger[iter->depth] will point to the parent node for
  *     which a node containing key may be inserted.
  */
-static int cb_bst_find_path(struct cb_bst_iter  *iter,
-                            const struct cb     *cb,
-                            cb_offset_t          root_node_offset,
-                            const struct cb_key *key)
+static int
+cb_bst_find_path(struct cb_bst_iter  *iter,
+                 const struct cb     *cb,
+                 cb_offset_t          root_node_offset,
+                 const struct cb_key *key)
 {
     cb_offset_t         curr_offset;
     struct cb_bst_node *curr_node;
@@ -346,9 +357,10 @@ static int cb_bst_find_path(struct cb_bst_iter  *iter,
 }
 
 
-static bool cb_bst_contains_key(const struct cb     *cb,
-                                cb_offset_t          root_node_offset,
-                                const struct cb_key *key)
+static bool
+cb_bst_contains_key(const struct cb     *cb,
+                    cb_offset_t          root_node_offset,
+                    const struct cb_key *key)
 {
     struct cb_bst_iter iter;
     int ret;
@@ -361,10 +373,11 @@ static bool cb_bst_contains_key(const struct cb     *cb,
 }
 
 
-int cb_bst_lookup(const struct cb     *cb,
-                  cb_offset_t          root_node_offset,
-                  const struct cb_key *key,
-                  struct cb_value     *value)
+int
+cb_bst_lookup(const struct cb     *cb,
+              cb_offset_t          root_node_offset,
+              const struct cb_key *key,
+              struct cb_value     *value)
 {
     struct cb_bst_iter iter;
     int ret;
@@ -392,8 +405,9 @@ fail:
 }
 
 
-static inline bool cb_bst_node_is_modifiable(cb_offset_t node_offset,
-                                             cb_offset_t cutoff_offset)
+static inline bool
+cb_bst_node_is_modifiable(cb_offset_t node_offset,
+                          cb_offset_t cutoff_offset)
 {
     int cmp = cb_offset_cmp(node_offset, cutoff_offset);
     assert(cmp == -1 || cmp == 0 || cmp == 1);
@@ -401,9 +415,10 @@ static inline bool cb_bst_node_is_modifiable(cb_offset_t node_offset,
 }
 
 
-static int cb_bst_select_modifiable_node(struct cb          **cb,
-                                         cb_offset_t          cutoff_offset,
-                                         cb_offset_t         *node_offset)
+static int
+cb_bst_select_modifiable_node(struct cb          **cb,
+                              cb_offset_t          cutoff_offset,
+                              cb_offset_t         *node_offset)
 {
     /* If the node we are trying to modify has been freshly created, then it is
        safe to modify it in place.  Otherwise, a copy will be made and we will
@@ -446,10 +461,11 @@ static int cb_bst_select_modifiable_node(struct cb          **cb,
 
 
 /* direction: 0="left", 1="right" */
-static int cb_bst_rotate(struct cb   **cb,
-                         cb_offset_t   cutoff_offset,
-                         cb_offset_t  *target_node_offset,
-                         int           direction)
+static int
+cb_bst_rotate(struct cb   **cb,
+              cb_offset_t   cutoff_offset,
+              cb_offset_t  *target_node_offset,
+              int           direction)
 {
     cb_offset_t         demoted_node_offset;
     struct cb_bst_node *demoted_node;
@@ -500,8 +516,9 @@ static int cb_bst_rotate(struct cb   **cb,
 }
 
 
-static inline bool cb_bst_node_is_red(const struct cb *cb,
-                                      cb_offset_t      node_offset)
+static inline bool
+cb_bst_node_is_red(const struct cb *cb,
+                   cb_offset_t      node_offset)
 {
     if (node_offset == CB_BST_SENTINEL)
         return false;
@@ -510,8 +527,9 @@ static inline bool cb_bst_node_is_red(const struct cb *cb,
 }
 
 
-static inline bool cb_bst_node_is_black(const struct cb *cb,
-                                      cb_offset_t      node_offset)
+static inline bool
+cb_bst_node_is_black(const struct cb *cb,
+                     cb_offset_t      node_offset)
 {
     if (node_offset == CB_BST_SENTINEL)
         return true;
@@ -520,11 +538,12 @@ static inline bool cb_bst_node_is_black(const struct cb *cb,
 }
 
 
-static bool cb_bst_validate_internal(const struct cb *cb,
-                                     cb_offset_t      node_offset,
-                                     uint32_t        *tree_height,
-                                     uint32_t         validate_depth,
-                                     bool             do_print)
+static bool
+cb_bst_validate_internal(const struct cb *cb,
+                         cb_offset_t      node_offset,
+                         uint32_t        *tree_height,
+                         uint32_t         validate_depth,
+                         bool             do_print)
 {
     struct cb_bst_node *node, *left_node, *right_node;
     uint32_t left_height = 0, right_height = 0;
@@ -641,9 +660,10 @@ struct sequence_check_state
 };
 
 
-static int sequence_check(const struct cb_key   *k,
-                          const struct cb_value *v,
-                          void                  *closure)
+static int
+sequence_check(const struct cb_key   *k,
+               const struct cb_value *v,
+               void                  *closure)
 {
     struct sequence_check_state *scs = closure;
 
@@ -667,9 +687,10 @@ static int sequence_check(const struct cb_key   *k,
 }
 
 
-static bool cb_bst_validate_sequence(const struct cb *cb,
-                                     cb_offset_t      node_offset,
-                                     bool             do_print)
+static bool
+cb_bst_validate_sequence(const struct cb *cb,
+                         cb_offset_t      node_offset,
+                         bool             do_print)
 {
     struct sequence_check_state scs = {
         .has_prev = false,
@@ -687,8 +708,11 @@ static bool cb_bst_validate_sequence(const struct cb *cb,
     return scs.failed ? false : true;
 }
 
-static bool cb_bst_validate(const struct cb *cb, cb_offset_t node_offset,
-                            const char *name)
+
+static bool
+cb_bst_validate(const struct cb *cb,
+                cb_offset_t      node_offset,
+                const char      *name)
 {
     uint32_t tree_height;
     bool     sequence_ok,
@@ -723,7 +747,9 @@ static bool cb_bst_validate(const struct cb *cb, cb_offset_t node_offset,
 }
 
 
-static void cb_bst_print(const struct cb *cb, cb_offset_t node_offset)
+static void
+cb_bst_print(const struct cb *cb,
+             cb_offset_t      node_offset)
 {
     uint32_t tree_height;
 
@@ -754,6 +780,7 @@ struct cb_bst_insert_state
     int         dir;
 };
 
+
 struct cb_bst_delete_state
 {
     cb_offset_t grandparent_node_offset;
@@ -766,6 +793,7 @@ struct cb_bst_delete_state
     int         parent_to_curr_dir;
     int         dir;
 };
+
 
 static bool cb_bst_insert_state_validate(struct cb                  *cb,
                                          struct cb_bst_insert_state *s)
@@ -823,10 +851,11 @@ static bool cb_bst_insert_state_validate(struct cb                  *cb,
 }
 
 
-static void cb_bst_print_insert0(const struct cb            *cb,
-                                 cb_offset_t                 node_offset,
-                                 uint32_t                    validate_depth,
-                                 struct cb_bst_insert_state *s)
+static void
+cb_bst_print_insert0(const struct cb            *cb,
+                     cb_offset_t                 node_offset,
+                     uint32_t                    validate_depth,
+                     struct cb_bst_insert_state *s)
 {
     struct cb_bst_node *node, *left_node, *right_node;
     static char spaces[] = "\t\t\t\t\t\t\t\t"
@@ -890,17 +919,19 @@ static void cb_bst_print_insert0(const struct cb            *cb,
 }
 
 
-static void cb_bst_print_insert(const struct cb            *cb,
-                                struct cb_bst_insert_state *s)
+static void
+cb_bst_print_insert(const struct cb            *cb,
+                    struct cb_bst_insert_state *s)
 {
     cb_bst_print_insert0(cb, s->new_root_node_offset, 0, s);
 }
 
 
-static void cb_bst_print_delete0(const struct cb            *cb,
-                                 cb_offset_t                 node_offset,
-                                 uint32_t                    validate_depth,
-                                 struct cb_bst_delete_state *s)
+static void
+cb_bst_print_delete0(const struct cb            *cb,
+                     cb_offset_t                 node_offset,
+                     uint32_t                    validate_depth,
+                     struct cb_bst_delete_state *s)
 {
     struct cb_bst_node *node, *left_node, *right_node;
     static char spaces[] = "\t\t\t\t\t\t\t\t"
@@ -963,15 +994,17 @@ static void cb_bst_print_delete0(const struct cb            *cb,
 }
 
 
-static void cb_bst_print_delete(const struct cb            *cb,
-                                struct cb_bst_delete_state *s)
+static void
+cb_bst_print_delete(const struct cb            *cb,
+                    struct cb_bst_delete_state *s)
 {
     cb_bst_print_delete0(cb, s->new_root_node_offset, 0, s);
 }
 
 
-static bool cb_bst_delete_state_validate(struct cb                  *cb,
-                                         struct cb_bst_delete_state *s)
+static bool
+cb_bst_delete_state_validate(struct cb                  *cb,
+                             struct cb_bst_delete_state *s)
 {
     (void)cb, (void)s;
 
@@ -984,6 +1017,7 @@ static bool cb_bst_delete_state_validate(struct cb                  *cb,
     //FIXME check sibling_node_offset?
     return true;
 }
+
 
 static const struct cb_bst_insert_state CB_BST_INSERT_STATE_INIT =
     {
@@ -1012,8 +1046,9 @@ static const struct cb_bst_delete_state CB_BST_DELETE_STATE_INIT =
     };
 
 
-static int cb_bst_red_pair_fixup_single(struct cb                  **cb,
-                                        struct cb_bst_insert_state  *s)
+static int
+cb_bst_red_pair_fixup_single(struct cb                  **cb,
+                             struct cb_bst_insert_state  *s)
 {
     /*
       grandparent 3,B       parent 2,B
@@ -1107,8 +1142,9 @@ static int cb_bst_red_pair_fixup_single(struct cb                  **cb,
 }
 
 
-static int cb_bst_red_pair_fixup_double(struct cb                  **cb,
-                                        struct cb_bst_insert_state  *s)
+static int
+cb_bst_red_pair_fixup_double(struct cb                  **cb,
+                             struct cb_bst_insert_state  *s)
 {
     /*
       grandparent 3,B       parent 2,B
@@ -1234,11 +1270,12 @@ static int cb_bst_red_pair_fixup_double(struct cb                  **cb,
 
 
 /* NOTE: Insertion uses a top-down method. */
-int cb_bst_insert(struct cb             **cb,
-                  cb_offset_t            *root_node_offset,
-                  cb_offset_t             cutoff_offset,
-                  const struct cb_key    *key,
-                  const struct cb_value  *value)
+int
+cb_bst_insert(struct cb             **cb,
+              cb_offset_t            *root_node_offset,
+              cb_offset_t             cutoff_offset,
+              const struct cb_key    *key,
+              const struct cb_value  *value)
 {
     struct cb_bst_insert_state s = CB_BST_INSERT_STATE_INIT;
     cb_offset_t         initial_cursor_offset = cb_cursor(*cb),
@@ -1430,8 +1467,9 @@ fail:
 }
 
 
-static int cb_bst_delete_fix_root(struct cb                  **cb,
-                                  struct cb_bst_delete_state  *s)
+static int
+cb_bst_delete_fix_root(struct cb                  **cb,
+                       struct cb_bst_delete_state  *s)
 {
 
     /*
@@ -1518,8 +1556,10 @@ static int cb_bst_delete_fix_root(struct cb                  **cb,
     return 0;
 }
 
-static int cb_bst_delete_case1(struct cb                  **cb,
-                               struct cb_bst_delete_state  *s)
+
+static int
+cb_bst_delete_case1(struct cb                  **cb,
+                    struct cb_bst_delete_state  *s)
 {
     /*
          parent 4,R                    4,R
@@ -1657,8 +1697,9 @@ static int cb_bst_delete_case1(struct cb                  **cb,
 }
 
 
-static int cb_bst_delete_case2(struct cb                  **cb,
-                               struct cb_bst_delete_state  *s)
+static int
+cb_bst_delete_case2(struct cb                  **cb,
+                    struct cb_bst_delete_state  *s)
 {
 
     /*
@@ -1799,6 +1840,7 @@ static int cb_bst_delete_case2(struct cb                  **cb,
 
     return 0;
 }
+
 
 #if 0
 static int cb_bst_delete_case3(struct cb                  **cb,
@@ -1962,8 +2004,10 @@ static int cb_bst_delete_case3(struct cb                  **cb,
 }
 #endif
 
-static int cb_bst_delete_case4(struct cb                  **cb,
-                               struct cb_bst_delete_state  *s)
+
+static int
+cb_bst_delete_case4(struct cb                  **cb,
+                    struct cb_bst_delete_state  *s)
 {
     /*
       parent      2,R                      3,R
@@ -2106,8 +2150,9 @@ static int cb_bst_delete_case4(struct cb                  **cb,
 }
 
 
-static int cb_bst_delete_case5(struct cb                  **cb,
-                               struct cb_bst_delete_state  *s)
+static int
+cb_bst_delete_case5(struct cb                  **cb,
+                    struct cb_bst_delete_state  *s)
 {
     /*
       parent      3,R                3,B
@@ -2212,10 +2257,11 @@ static int cb_bst_delete_case5(struct cb                  **cb,
 }
 
 
-int cb_bst_delete(struct cb             **cb,
-                  cb_offset_t            *root_node_offset,
-                  cb_offset_t             cutoff_offset,
-                  const struct cb_key    *key)
+int
+cb_bst_delete(struct cb             **cb,
+              cb_offset_t            *root_node_offset,
+              cb_offset_t             cutoff_offset,
+              const struct cb_key    *key)
 {
     struct cb_bst_delete_state s = CB_BST_DELETE_STATE_INIT;
     cb_offset_t         initial_cursor_offset = cb_cursor(*cb),
@@ -2492,7 +2538,8 @@ fail:
 }
 
 
-int cb_map_init(struct cb_map *cb_map, struct cb **cb)
+int
+cb_map_init(struct cb_map *cb_map, struct cb **cb)
 {
     cb_map->cb = cb;
 
@@ -2500,9 +2547,10 @@ int cb_map_init(struct cb_map *cb_map, struct cb **cb)
 }
 
 
-int cb_map_kv_set(struct cb_map         *cb_map,
-                  const struct cb_key   *k,
-                  const struct cb_value *v)
+int
+cb_map_kv_set(struct cb_map         *cb_map,
+              const struct cb_key   *k,
+              const struct cb_value *v)
 {
     cb_offset_t command_offset;
     struct cb_command_any *command;
@@ -2523,9 +2571,10 @@ int cb_map_kv_set(struct cb_map         *cb_map,
 }
 
 
-int cb_map_kv_lookup(const struct cb_map *cb_map,
-                     const struct cb_key *k,
-                     struct cb_value     *v)
+int
+cb_map_kv_lookup(const struct cb_map *cb_map,
+                 const struct cb_key *k,
+                 struct cb_value     *v)
 {
     struct cb_command_any *cmd;
     bool did_find = false;
@@ -2575,7 +2624,8 @@ done:
 }
 
 
-int cb_map_kv_delete(struct cb_map *cb_map, const struct cb_key *k)
+int
+cb_map_kv_delete(struct cb_map *cb_map, const struct cb_key *k)
 {
     cb_offset_t command_offset;
     struct cb_command_any *command;
@@ -2595,10 +2645,11 @@ int cb_map_kv_delete(struct cb_map *cb_map, const struct cb_key *k)
 }
 
 
-static int cb_map_traverse_internal(const struct cb        *cb,
-                                    cb_offset_t             root_node_offset,
-                                    cb_map_traverse_func_t  func,
-                                    void                   *closure)
+static int
+cb_map_traverse_internal(const struct cb        *cb,
+                         cb_offset_t             root_node_offset,
+                         cb_map_traverse_func_t  func,
+                         void                   *closure)
 {
     struct cb_bst_iter iter;
     cb_offset_t        curr_node_offset;
@@ -2639,9 +2690,10 @@ traverse_left:
 /*
  * This will traverse each entry in the map, from lowest to highest.
  */
-int cb_map_traverse(struct cb_map          *cb_map,
-                    cb_map_traverse_func_t  func,
-                    void                   *closure)
+int
+cb_map_traverse(struct cb_map          *cb_map,
+                cb_map_traverse_func_t  func,
+                void                   *closure)
 {
     struct cb_command_any *cmd;
 
@@ -2669,9 +2721,10 @@ struct traverse_state
 };
 
 
-static int traversal_insert(const struct cb_key   *k,
-                            const struct cb_value *v,
-                            void                  *closure)
+static int
+traversal_insert(const struct cb_key   *k,
+                 const struct cb_value *v,
+                 void                  *closure)
 {
     struct traverse_state *ts = closure;
 
@@ -2683,9 +2736,10 @@ static int traversal_insert(const struct cb_key   *k,
 }
 
 
-static int traversal_delete(const struct cb_key   *k,
-                            const struct cb_value *v,
-                            void                  *closure)
+static int
+traversal_delete(const struct cb_key   *k,
+                 const struct cb_value *v,
+                 void                  *closure)
 {
     struct traverse_state *ts = closure;
     int ret;
@@ -2713,7 +2767,8 @@ static int traversal_delete(const struct cb_key   *k,
  * upon reaching a CB_CMD_BST, the newly-built tree and the old tree should
  * be merged/joined/concatenated.
  */
-static int cb_map_consolidate_internal(struct cb_map *cb_map)
+static int
+cb_map_consolidate_internal(struct cb_map *cb_map)
 {
     struct cb_command_any *cmd, *new_cmd;
     cb_offset_t insertions_root_node_offset = CB_BST_SENTINEL,
@@ -2842,7 +2897,8 @@ fail:
 }
 
 
-int cb_map_consolidate(struct cb_map *cb_map)
+int
+cb_map_consolidate(struct cb_map *cb_map)
 {
     int ret;
 
@@ -2866,7 +2922,8 @@ int cb_map_consolidate(struct cb_map *cb_map)
 }
 
 
-static char* cb_key_to_str(struct cb_key *key)
+static char*
+cb_key_to_str(struct cb_key *key)
 {
     char *str;
     int ret;
@@ -2876,7 +2933,8 @@ static char* cb_key_to_str(struct cb_key *key)
 }
 
 
-static char* cb_value_to_str(struct cb_value *value)
+static char*
+cb_value_to_str(struct cb_value *value)
 {
     char *str;
     int ret;
@@ -2886,7 +2944,8 @@ static char* cb_value_to_str(struct cb_value *value)
 }
 
 
-static char* cb_bst_to_str(const struct cb *cb, cb_offset_t node_offset)
+static char*
+cb_bst_to_str(const struct cb *cb, cb_offset_t node_offset)
 {
     struct cb_bst_node *node;
     char *str, *keystr, *valstr, *leftstr, *rightstr;
@@ -2913,7 +2972,8 @@ static char* cb_bst_to_str(const struct cb *cb, cb_offset_t node_offset)
 }
 
 
-void cb_map_print(const struct cb_map *cb_map)
+void
+cb_map_print(const struct cb_map *cb_map)
 {
     cb_offset_t            cmd_offset;
     struct cb_command_any *cmd;
