@@ -204,11 +204,11 @@ function generate_toplevel_html()
             <pre>$(cat "${SUITE_ROOT}/coverage_tests/coverage_summary")</pre>
             <h1>Maps</h1>
             <h2>Latency</h2>
-            <a href="map_latency/figure.svg"><img src="map_latency/figure.png" alt="Map Implementation Latency Measurements"></img></a>
+                <object data="map_latency/figure.svg" type="image/svg+xml" width="100%"></object>
             <h2>cb_bst Flamegraph</h2>
-            <object data="${SUITE_ROOT}/map_flamegraphs/cbbst_flame.svg" type="image/svg+xml" width="100%"></object>
+                <object data="map_flamegraphs/cbbst_flame.svg" type="image/svg+xml" width="100%"></object>
             <h2>cb_map Flamegraph</h2>
-            <object data="${SUITE_ROOT}/map_flamegraphs/cbmap_flame.svg" type="image/svg+xml" width="100%"></object>
+                <object data="map_flamegraphs/cbmap_flame.svg" type="image/svg+xml" width="100%"></object>
         </body>
         </html>
 EOF
