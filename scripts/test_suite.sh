@@ -131,7 +131,7 @@ function generate_map_flamegraphs()
     pushd "${test_root}"
 
     perf record -F 1000 -a -g -- \
-        "${BUILD_ROOT}"/Debug/test_measure --ring-size=134217728 >"${outfile}" 2>&1
+        "${BUILD_ROOT}"/Debug/test_measure --ring-size=134217728 --ratios 1,1,1,1,1,1 >"${outfile}" 2>&1
     perf script |stackcollapse-perf.pl --kernel >"${foldedfile}"
     gzip perf.data
 
@@ -166,9 +166,10 @@ function generate_map_latency_plots()
     mkdir "${test_root}"
     pushd "${test_root}"
 
-    "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 >"${outfile}" 2>&1
+    "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 --ratios 1,1,1,1,1,1 >"${outfile}" 2>&1
     "${SCRIPTS_ROOT}/plot_measure.py" "${outfile}"
 
+    ls -l "${test_root}"/map-*-* >"${test_root}/used_maps"
     rm "${test_root}"/map-*-*
 
     popd
@@ -191,6 +192,7 @@ function generate_toplevel_html()
             <br>
             <a href="coverage_tests/coverage_html/index.html">Coverage Results</a>
             <pre>$(cat "${SUITE_ROOT}/coverage_tests/coverage_summary")</pre>
+            <a href="map_latency/figure.svg"><img src="map_latency/figure.png" alt="Map Implementation Latency Measurements"></img></a>
         </body>
         </html>
 EOF
