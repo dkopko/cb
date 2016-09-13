@@ -108,9 +108,18 @@ function do_coverage_tests()
 
 function _exclude_kernel()
 { 
+    # Exclude kernel-related function invocations
     sed -e 's/;[^;]*_\[k\]//g'
 }
 
+function _omit_offsets()
+{
+    # Exclude '+0xfff...'-like suffixes which seem to have been added to perf
+    # since the instructions at
+    # http://www.brendangregg.com/FlameGraphs/cpuflamegraphs.html have been
+    # written.
+    sed -e 's/\([^ 	]\)+0x[0-9a-f]*/\1/'
+}
 
 function generate_map_flamegraphs()
 {
@@ -132,7 +141,7 @@ function generate_map_flamegraphs()
 
     perf record -F 1000 -a -g -- \
         "${BUILD_ROOT}"/Debug/test_measure --ring-size=134217728 --ratios 1,1,1,1,1,1 >"${outfile}" 2>&1
-    perf script |stackcollapse-perf.pl --kernel >"${foldedfile}"
+    perf script |_omit_offsets |stackcollapse-perf.pl --kernel >"${foldedfile}"
     gzip perf.data
 
     cat "${foldedfile}" |
@@ -190,9 +199,16 @@ function generate_toplevel_html()
         <body>
             CB Tests performed on ${RUN_NAME}.
             <br>
-            <a href="coverage_tests/coverage_html/index.html">Coverage Results</a>
+            <h1>Coverage</h1>
+            <a href="coverage_tests/coverage_html/index.html">Results</a>
             <pre>$(cat "${SUITE_ROOT}/coverage_tests/coverage_summary")</pre>
+            <h1>Maps</h1>
+            <h2>Latency</h2>
             <a href="map_latency/figure.svg"><img src="map_latency/figure.png" alt="Map Implementation Latency Measurements"></img></a>
+            <h2>cb_bst Flamegraph</h2>
+            <object data="${SUITE_ROOT}/map_flamegraphs/cbbst_flame.svg" type="image/svg+xml" width="100%"></object>
+            <h2>cb_map Flamegraph</h2>
+            <object data="${SUITE_ROOT}/map_flamegraphs/cbmap_flame.svg" type="image/svg+xml" width="100%"></object>
         </body>
         </html>
 EOF
