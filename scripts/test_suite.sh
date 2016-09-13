@@ -210,6 +210,10 @@ do
             print_usage
             exit 0
             ;;
+        -l|--show-last-success)
+            "${SHOW_PROG}" "${TESTRUNS_ROOT}/latest_success/index.html"
+            exit 0
+            ;;
         -s|--show)
             DO_SHOW=yes
             shift
@@ -258,6 +262,6 @@ update_symlink_latest_success
 # Show test report if requested.
 if [[ "${DO_SHOW}" == "yes" ]]
 then
-    "${SHOW_PROG}" "${SUITE_ROOT}"/index.html
+    "${SHOW_PROG}" "${SUITE_ROOT}/index.html"
 fi
 
