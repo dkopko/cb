@@ -92,9 +92,9 @@ function do_coverage_tests()
     lcov --remove "${coverage_file}" '/usr/*' '*/external/*' '*/test/*' --output-file "${cleaned_coverage_file}" --rc lcov_branch_coverage=1
     genhtml -o "${coverage_html_root}" "${cleaned_coverage_file}" --rc lcov_branch_coverage=1
     {
-        lcov -l "${cleaned_coverage_file}"
+        lcov -l "${cleaned_coverage_file}" --rc lcov_branch_coverage=1
         echo
-        lcov --summary "${cleaned_coverage_file}"
+        lcov --summary "${cleaned_coverage_file}" --rc lcov_branch_coverage=1
     } 2>&1 |grep -v coverage.info.cleaned >"${coverage_summary_file}"
 
     # Clear coverage data to have not disrupted contents of BUILD_ROOT/Coverage.
