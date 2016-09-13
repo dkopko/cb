@@ -335,9 +335,8 @@ cb_bst_find_path(struct cb_bst_iter  *iter,
 
     curr_offset = root_node_offset;
 
-    while(curr_offset != CB_BST_SENTINEL)
+    while ((curr_node = cb_bst_node_at(cb, curr_offset)) != NULL)
     {
-        curr_node = cb_at(cb, curr_offset);
 
         cmp = cb_key_cmp(key, &(curr_node->key));
 
@@ -520,10 +519,8 @@ static inline bool
 cb_bst_node_is_red(const struct cb *cb,
                    cb_offset_t      node_offset)
 {
-    if (node_offset == CB_BST_SENTINEL)
-        return false;
-
-    return ((struct cb_bst_node*)cb_at(cb, node_offset))->color == CB_BST_RED;
+    struct cb_bst_node *node = cb_bst_node_at(cb, node_offset);
+    return node && node->color == CB_BST_RED;
 }
 
 
@@ -531,10 +528,8 @@ static inline bool
 cb_bst_node_is_black(const struct cb *cb,
                      cb_offset_t      node_offset)
 {
-    if (node_offset == CB_BST_SENTINEL)
-        return true;
-
-    return ((struct cb_bst_node*)cb_at(cb, node_offset))->color == CB_BST_BLACK;
+    struct cb_bst_node *node = cb_bst_node_at(cb, node_offset);
+    return !node || node->color == CB_BST_BLACK;
 }
 
 
@@ -563,7 +558,7 @@ cb_bst_validate_internal(const struct cb *cb,
         return true;
     }
 
-    node = cb_at(cb, node_offset);
+    node = cb_bst_node_at(cb, node_offset);
     if (do_print)
         printf("%.*s%snode_offset %ju: {k: %ju, v: %ju, color: %s, left: %ju, right: %ju}%s\n",
                (int)validate_depth, spaces,
@@ -576,10 +571,9 @@ cb_bst_validate_internal(const struct cb *cb,
                (uintmax_t)node->child[1],
                node->color == CB_BST_RED ? "\033[0m" : "");
 
-    if (node->child[0] != CB_BST_SENTINEL)
+    left_node = cb_bst_node_at(cb, node->child[0]);
+    if (left_node)
     {
-        left_node = cb_at(cb, node->child[0]);
-
         if (cb_key_cmp(&(left_node->key), &(node->key)) != -1)
         {
             if (do_print)
@@ -592,10 +586,9 @@ cb_bst_validate_internal(const struct cb *cb,
         }
     }
 
-    if (node->child[1] != CB_BST_SENTINEL)
+    right_node = cb_bst_node_at(cb, node->child[1]);
+    if (right_node)
     {
-        right_node = cb_at(cb, node->child[1]);
-
         if (cb_key_cmp(&(node->key), &(right_node->key)) != -1)
         {
             if (do_print)
@@ -870,7 +863,7 @@ cb_bst_print_insert0(const struct cb            *cb,
     if (node_offset == CB_BST_SENTINEL)
         return;
 
-    node = cb_at(cb, node_offset);
+    node = cb_bst_node_at(cb, node_offset);
     printf("%.*s%snode_offset %ju: {k: %ju, v: %ju, color: %s, left: %ju, right: %ju}%s%s%s%s%s\n",
            (int)validate_depth, spaces,
            node->color == CB_BST_RED ? "\033[1;31;40m" : "",
@@ -886,10 +879,9 @@ cb_bst_print_insert0(const struct cb            *cb,
            (node_offset == s->parent_node_offset ? " PARENT" : ""),
            (node_offset == s->curr_node_offset ? " CURRENT" : ""));
 
-    if (node->child[0] != CB_BST_SENTINEL)
+    left_node = cb_bst_node_at(cb, node->child[0]);
+    if (left_node)
     {
-        left_node = cb_at(cb, node->child[0]);
-
         if (cb_key_cmp(&(left_node->key), &(node->key)) != -1)
         {
             printf("%*.snode_offset %ju: left key %ju (off: %ju) !< key %ju\n",
@@ -900,10 +892,9 @@ cb_bst_print_insert0(const struct cb            *cb,
         }
     }
 
-    if (node->child[1] != CB_BST_SENTINEL)
+    right_node = cb_bst_node_at(cb, node->child[1]);
+    if (right_node)
     {
-        right_node = cb_at(cb, node->child[1]);
-
         if (cb_key_cmp(&(node->key), &(right_node->key)) != -1)
         {
             printf("%*.snode_offset %ju: key %ju !< right key %ju (off:%ju)\n",
@@ -946,7 +937,7 @@ cb_bst_print_delete0(const struct cb            *cb,
     if (node_offset == CB_BST_SENTINEL)
         return;
 
-    node = cb_at(cb, node_offset);
+    node = cb_bst_node_at(cb, node_offset);
     printf("%.*s%snode_offset %ju: {k: %ju, v: %ju, color: %s, left: %ju, right: %ju}%s%s%s%s\n",
            (int)validate_depth, spaces,
            node->color == CB_BST_RED ? "\033[1;31;40m" : "",
@@ -961,10 +952,9 @@ cb_bst_print_delete0(const struct cb            *cb,
            (node_offset == s->parent_node_offset ? " PARENT" : ""),
            (node_offset == s->curr_node_offset ? " CURRENT" : ""));
 
-    if (node->child[0] != CB_BST_SENTINEL)
+    left_node = cb_bst_node_at(cb, node->child[0]);
+    if (left_node)
     {
-        left_node = cb_at(cb, node->child[0]);
-
         if (cb_key_cmp(&(left_node->key), &(node->key)) != -1)
         {
             printf("%*.snode_offset %ju: left key %ju (off: %ju) !< key %ju\n",
@@ -975,10 +965,9 @@ cb_bst_print_delete0(const struct cb            *cb,
         }
     }
 
-    if (node->child[1] != CB_BST_SENTINEL)
+    right_node = cb_bst_node_at(cb, node->child[1]);
+    if (right_node)
     {
-        right_node = cb_at(cb, node->child[1]);
-
         if (cb_key_cmp(&(node->key), &(right_node->key)) != -1)
         {
             printf("%*.snode_offset %ju: key %ju !< right key %ju (off:%ju)\n",
@@ -2666,7 +2655,7 @@ traverse_left:
     {
         //cb_log_debug("curr_node_offset: %ju", (uintmax_t)curr_node_offset);
         iter.finger[iter.depth].offset = curr_node_offset;
-        iter.finger[iter.depth].node   = cb_at(cb, curr_node_offset);
+        iter.finger[iter.depth].node   = cb_bst_node_at(cb, curr_node_offset);
         curr_node_offset = iter.finger[iter.depth].node->child[0];
         iter.depth++;
     }
@@ -2951,10 +2940,9 @@ cb_bst_to_str(const struct cb *cb, cb_offset_t node_offset)
     char *str, *keystr, *valstr, *leftstr, *rightstr;
     int ret;
 
-    if (node_offset == CB_BST_SENTINEL)
+    node = cb_bst_node_at(cb, node_offset);
+    if (!node)
         return strdup("NIL");
-
-    node = cb_at(cb, node_offset);
 
     keystr   = cb_key_to_str(&(node->key));
     valstr   = cb_value_to_str(&(node->value));
