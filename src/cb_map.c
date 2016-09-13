@@ -304,7 +304,7 @@ cb_bst_node_alloc(struct cb   **cb,
 }
 
 
-static inline struct cb_bst_node*
+CB_INLINE struct cb_bst_node*
 cb_bst_node_at(const struct cb *cb,
                cb_offset_t      node_offset)
 {
@@ -404,7 +404,7 @@ fail:
 }
 
 
-static inline bool
+CB_INLINE bool
 cb_bst_node_is_modifiable(cb_offset_t node_offset,
                           cb_offset_t cutoff_offset)
 {
@@ -515,7 +515,7 @@ cb_bst_rotate(struct cb   **cb,
 }
 
 
-static inline bool
+CB_INLINE bool
 cb_bst_node_is_red(const struct cb *cb,
                    cb_offset_t      node_offset)
 {
@@ -524,7 +524,7 @@ cb_bst_node_is_red(const struct cb *cb,
 }
 
 
-static inline bool
+CB_INLINE bool
 cb_bst_node_is_black(const struct cb *cb,
                      cb_offset_t      node_offset)
 {
