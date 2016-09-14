@@ -444,14 +444,6 @@ cb_bst_select_modifiable_node(struct cb          **cb,
     old_node = cb_bst_node_at(*cb, old_node_offset);
     new_node = cb_bst_node_at(*cb, new_node_offset);
     memcpy(new_node, old_node, sizeof(*new_node));
-#if 0
-    //FIXME remove
-    cb_key_assign(&(new_node->key), &(old_node->key));
-    cb_value_assign(&(new_node->value), &(old_node->value));
-    new_node->color    = old_node->color;
-    new_node->child[0] = old_node->child[0];
-    new_node->child[1] = old_node->child[1];
-#endif
 
     *node_offset = new_node_offset;
 
