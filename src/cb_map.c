@@ -18,7 +18,6 @@
 #include "cb_assert.h"
 #include "cb_map.h"
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>

@@ -15,6 +15,7 @@
  * along with CB.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "cb_lb_set.h"
+#include "cb_assert.h"
 
 
 static int
@@ -81,7 +82,7 @@ int
 cb_lb_set_add(struct cb_lb_set   *lbset,
               struct cb_lb_entry *lbentry)
 {
-    assert(RB_FIND(cb_lb_tree, &(lbset->head), lbentry) == NULL);
+    cb_assert(RB_FIND(cb_lb_tree, &(lbset->head), lbentry) == NULL);
     RB_INSERT(cb_lb_tree, &(lbset->head), lbentry);
     ++(lbset->num_entries);
     if (lbset->num_entries == 1 ||
@@ -90,7 +91,7 @@ cb_lb_set_add(struct cb_lb_set   *lbset,
         lbset->lowest_bound = lbentry->lower_bound;
     }
 
-    heavy_assert(cb_lb_set_validate(lbset));
+    cb_heavy_assert(cb_lb_set_validate(lbset));
 
     cb_log_debug("%p added %p @ %ju -- {num_entries: %ju, lowest_bound: %ju}",
                  lbset,
@@ -107,13 +108,13 @@ int
 cb_lb_set_remove(struct cb_lb_set   *lbset,
                  struct cb_lb_entry *lbentry)
 {
-    assert(RB_FIND(cb_lb_tree, &(lbset->head), lbentry) != NULL);
+    cb_assert(RB_FIND(cb_lb_tree, &(lbset->head), lbentry) != NULL);
     RB_REMOVE(cb_lb_tree, &(lbset->head), lbentry);
     --(lbset->num_entries);
     if (lbentry->lower_bound == lbset->lowest_bound && lbset->num_entries > 0)
         lbset->lowest_bound = RB_MIN(cb_lb_tree, &(lbset->head))->lower_bound;
 
-    heavy_assert(cb_lb_set_validate(lbset));
+    cb_heavy_assert(cb_lb_set_validate(lbset));
 
     cb_log_debug("%p removed %p @ %ju -- {num_entries: %ju, lowest_bound: %ju}",
                  lbset,
@@ -134,7 +135,7 @@ cb_lb_set_get_lowest_entry(struct cb_lb_set *lbset)
     if (lbset->num_entries > 0)
     {
         lowest_entry = RB_MIN(cb_lb_tree, &(lbset->head));
-        assert(lbset->lowest_bound == lowest_entry->lower_bound);
+        cb_assert(lbset->lowest_bound == lowest_entry->lower_bound);
     }
 
     return lowest_entry;

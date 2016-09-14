@@ -15,8 +15,12 @@
  * along with CB.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "cb_structmap.h"
+
+#include "cb_assert.h"
 #include "cb_bits.h"
+
 #include <string.h>
+
 
 /* FIXME
  * 1) Allow CB_STRUCTMAP_LEVEL_BITS in the range of 2..8.  This will involve
@@ -70,7 +74,7 @@ cb_structmap_node_has_child(struct cb_structmap_node *node,
                             uint8_t                   child_index)
 {
     //FIXME, until we rework child_locations, we can't exceed 64 indices
-    assert(child_index < 64);
+    cb_assert(child_index < 64);
     return !!(node->child_locations & ((uint64_t)1 << child_index));
 }
 
@@ -80,7 +84,7 @@ cb_structmap_node_child(struct cb_structmap_node *node,
                         uint8_t                   child_index)
 {
     size_t condensed_index;
-    assert(cb_structmap_node_has_child(node, child_index));
+    cb_assert(cb_structmap_node_has_child(node, child_index));
     condensed_index =
         popcount64(node->child_locations & (((uint64_t)1 << child_index) - 1));
     return node->children[condensed_index];
@@ -125,7 +129,7 @@ cb_structmap_node_is_modifiable(cb_offset_t node_offset,
                           cb_offset_t cutoff_offset)
 {
     int cmp = cb_offset_cmp(node_offset, cutoff_offset);
-    assert(cmp == -1 || cmp == 0 || cmp == 1);
+    cb_assert(cmp == -1 || cmp == 0 || cmp == 1);
     return cmp > -1;
 }
 
@@ -182,7 +186,7 @@ cb_structmap_select_modifiable_node(struct cb          **cb,
          */
         uint8_t num_entries = (1 << old_node->consume_bitcount);
 
-        assert(old_node->layout == CB_STRUCTMAP_CONDENSED);
+        cb_assert(old_node->layout == CB_STRUCTMAP_CONDENSED);
         new_node->layout            = CB_STRUCTMAP_SPARSE;
         new_node->consume_bitcount  = old_node->consume_bitcount;
         new_node->enclosed_bitcount = old_node->enclosed_bitcount;
@@ -213,11 +217,11 @@ cb_structmap_print_internal(const struct cb *cb,
     static char spaces[] = "\t\t\t\t\t\t\t\t"
                            "\t\t\t\t\t\t\t\t";
 
-    assert(node_offset != CB_STRUCTMAP_SENTINEL);
-    assert(depth <= 16);
+    cb_assert(node_offset != CB_STRUCTMAP_SENTINEL);
+    cb_assert(depth <= 16);
 
     node = cb_structmap_node_at(cb, node_offset);
-    assert(node != NULL);
+    cb_assert(node != NULL);
 
     printf("%.*s{%d}@%ju (%s, levelbits:%d, enclosed_bits:%ju, children:0x%jx)\n",
            (int)depth, spaces,
@@ -229,7 +233,7 @@ cb_structmap_print_internal(const struct cb *cb,
            (uintmax_t)node->child_locations);
 
     max_index = (1 << node->consume_bitcount);
-    assert(max_index <= 64);
+    cb_assert(max_index <= 64);
 
     if (!cb_structmap_node_is_leaf(node))
     {
@@ -340,10 +344,10 @@ cb_structmap_heighten(struct cb      **cb,
     headroom_bitcount         = 64 - enclosed_bitcount;
     /*NOTE: (struct_id | 1) guarantees proper behavior when struct_id == 0. */
     unenclosed_bits_remaining = ((struct_id | 1) >> enclosed_bitcount);
-    assert(headroom_bitcount > 0);
-    assert(headroom_bitcount <= 64);
-    assert(unenclosed_bits_remaining > 0);
-    assert(headroom_bitcount == 64 ||
+    cb_assert(headroom_bitcount > 0);
+    cb_assert(headroom_bitcount <= 64);
+    cb_assert(unenclosed_bits_remaining > 0);
+    cb_assert(headroom_bitcount == 64 ||
            ((uint64_t)1 << headroom_bitcount) >= unenclosed_bits_remaining);
 
     while (unenclosed_bits_remaining > 0)
@@ -358,7 +362,7 @@ cb_structmap_heighten(struct cb      **cb,
         if (headroom_bitcount < CB_STRUCTMAP_LEVEL_BITS)
             new_level_consume_bitcount = headroom_bitcount;
         new_level_num_entries = (1 << new_level_consume_bitcount);
-        assert(new_level_num_entries <= 64);
+        cb_assert(new_level_num_entries <= 64);
         new_level_enclosed_bitcount =
             (enclosed_bitcount + new_level_consume_bitcount);
 
@@ -369,7 +373,7 @@ cb_structmap_heighten(struct cb      **cb,
             return ret;
 
         new_level_node = cb_structmap_node_at(*cb, new_level_node_offset);
-        assert(new_level_node);
+        cb_assert(new_level_node);
 
         /*
          * Initialize new level's node contents. The earlier, lower
@@ -398,10 +402,10 @@ cb_structmap_heighten(struct cb      **cb,
      * to a root structmap node which is sufficiently enclosing of the
      * provided struct_id.
      */
-    assert(curr_root_node_offset != CB_STRUCTMAP_SENTINEL);
-    assert(enclosed_bitcount ==
+    cb_assert(curr_root_node_offset != CB_STRUCTMAP_SENTINEL);
+    cb_assert(enclosed_bitcount ==
            cb_structmap_node_at(*cb, curr_root_node_offset)->enclosed_bitcount);
-    assert(enclosed_bitcount == 64 ||
+    cb_assert(enclosed_bitcount == 64 ||
             struct_id <= ((uint64_t)1 << enclosed_bitcount));
 
     *root_node_offset = curr_root_node_offset;
@@ -537,7 +541,7 @@ cb_structmap_insert(struct cb      **cb,
     uint64_t                  enclosed_bitcount_remaining;
     int ret;
 
-    heavy_assert(cb_structmap_validate(*cb, *root_node_offset, "pre-insert"));
+    cb_heavy_assert(cb_structmap_validate(*cb, *root_node_offset, "pre-insert"));
 
     curr_node_offset = *root_node_offset;
 
@@ -580,8 +584,8 @@ heighten:
     new_root_node_offset = curr_node_offset;
 
     enclosed_bitcount_remaining = curr_node->enclosed_bitcount;
-    assert(enclosed_bitcount_remaining > 0);
-    assert(enclosed_bitcount_remaining >= curr_node->consume_bitcount);
+    cb_assert(enclosed_bitcount_remaining > 0);
+    cb_assert(enclosed_bitcount_remaining >= curr_node->consume_bitcount);
     while (enclosed_bitcount_remaining > curr_node->consume_bitcount)
     {
         curr_path_to_child =
@@ -643,11 +647,11 @@ heighten:
      * child node for the next level.  Instead, it stores the offset of the
      * struct being inserted into this structmap.
      */
-    assert(enclosed_bitcount_remaining == curr_node->consume_bitcount);
+    cb_assert(enclosed_bitcount_remaining == curr_node->consume_bitcount);
     curr_path_to_child = bits_at(struct_id, curr_node->consume_bitcount, 0);
     curr_node->children[curr_path_to_child] = struct_offset;
 
-    heavy_assert(cb_structmap_validate(*cb,
+    cb_heavy_assert(cb_structmap_validate(*cb,
                                        new_root_node_offset,
                                        "post-insert"));
 
@@ -658,7 +662,7 @@ heighten:
 
 fail:
     cb_rewind_to(*cb, initial_cursor_offset);
-    heavy_assert(cb_structmap_validate(*cb,
+    cb_heavy_assert(cb_structmap_validate(*cb,
                                        *root_node_offset,
                                        "post-insert-fail"));
     return ret;
@@ -678,7 +682,7 @@ cb_structmap_lookup(const struct cb *cb,
     uint64_t                  enclosed_mask;
     uint64_t                  enclosed_bitcount_remaining;
 
-    heavy_assert(cb_structmap_validate(cb,
+    cb_heavy_assert(cb_structmap_validate(cb,
                                        root_node_offset,
                                        "pre-lookup"));
 
@@ -695,8 +699,8 @@ cb_structmap_lookup(const struct cb *cb,
 
     /* Traverse for segments of the struct_id. */
     enclosed_bitcount_remaining = enclosed_bitcount;
-    assert(enclosed_bitcount_remaining > 0);
-    assert(enclosed_bitcount_remaining >= curr_node->consume_bitcount);
+    cb_assert(enclosed_bitcount_remaining > 0);
+    cb_assert(enclosed_bitcount_remaining >= curr_node->consume_bitcount);
     while (enclosed_bitcount_remaining > curr_node->consume_bitcount)
     {
         curr_path_to_child =
@@ -720,7 +724,7 @@ cb_structmap_lookup(const struct cb *cb,
     }
 
     /* Check at the final leaf. */
-    assert(enclosed_bitcount_remaining == curr_node->consume_bitcount);
+    cb_assert(enclosed_bitcount_remaining == curr_node->consume_bitcount);
     curr_path_to_child = bits_at(struct_id, curr_node->consume_bitcount, 0);
     if (curr_node->layout == CB_STRUCTMAP_CONDENSED &&
         !cb_structmap_node_has_child(curr_node, curr_path_to_child))
@@ -755,7 +759,7 @@ cb_structmap_delete(struct cb      **cb,
     uint64_t                  enclosed_bitcount_remaining;
     int ret;
 
-    heavy_assert(cb_structmap_validate(*cb, *root_node_offset, "pre-delete"));
+    cb_heavy_assert(cb_structmap_validate(*cb, *root_node_offset, "pre-delete"));
 
     curr_node_offset = *root_node_offset;
 
@@ -794,8 +798,8 @@ cb_structmap_delete(struct cb      **cb,
     new_root_node_offset = curr_node_offset;
 
     enclosed_bitcount_remaining = curr_node->enclosed_bitcount;
-    assert(enclosed_bitcount_remaining > 0);
-    assert(enclosed_bitcount_remaining >= curr_node->consume_bitcount);
+    cb_assert(enclosed_bitcount_remaining > 0);
+    cb_assert(enclosed_bitcount_remaining >= curr_node->consume_bitcount);
     while (enclosed_bitcount_remaining > curr_node->consume_bitcount)
     {
         curr_path_to_child =
@@ -827,7 +831,7 @@ cb_structmap_delete(struct cb      **cb,
      * check whether this struct_id is stored (i.e. the appropriate children[i]
      * offset for this level is != CB_STRUCTMAP_SENTINEL), and clear it if so.
      */
-    assert(enclosed_bitcount_remaining == curr_node->consume_bitcount);
+    cb_assert(enclosed_bitcount_remaining == curr_node->consume_bitcount);
     curr_path_to_child = bits_at(struct_id, curr_node->consume_bitcount, 0);
     if (curr_node->children[curr_path_to_child] == CB_STRUCTMAP_SENTINEL)
     {
@@ -837,7 +841,7 @@ cb_structmap_delete(struct cb      **cb,
     struct_offset_removed = curr_node->children[curr_path_to_child];
     curr_node->children[curr_path_to_child] = CB_STRUCTMAP_SENTINEL;
 
-    heavy_assert(cb_structmap_validate(*cb, *root_node_offset, "post-delete"));
+    cb_heavy_assert(cb_structmap_validate(*cb, *root_node_offset, "post-delete"));
 
     /* Update the received root to point to the new root. */
     *root_node_offset = new_root_node_offset;
@@ -848,7 +852,7 @@ cb_structmap_delete(struct cb      **cb,
 
 fail:
     cb_rewind_to(*cb, initial_cursor_offset);
-    heavy_assert(cb_structmap_validate(*cb,
+    cb_heavy_assert(cb_structmap_validate(*cb,
                                        *root_node_offset,
                                        "post-delete-fail"));
     return ret;

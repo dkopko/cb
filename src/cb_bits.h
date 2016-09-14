@@ -17,13 +17,11 @@
 #ifndef _CB_BITS_H_
 #define _CB_BITS_H_
 
-#include "cb.h"
+#include "cb_misc.h"
+#include "cb_assert.h"
 
-
-#define BITS_PER_BYTE 8
-
-#define likely(e)   __builtin_expect(!!(e), 1)
-#define unlikely(e) __builtin_expect((e), 0)
+#include <stddef.h>
+#include <stdint.h>
 
 
 /*
@@ -145,7 +143,7 @@ CB_INLINE size_t
 power_of_2_size_gt(size_t x)
 {
     size_t result = mask_below_bit(64 - clz64(x)) + 1;
-    assert(is_power_of_2_size(result));
+    cb_assert(is_power_of_2_size(result));
     return result;
 }
 
@@ -156,7 +154,7 @@ CB_INLINE size_t
 power_of_2_size_gte(size_t x)
 {
     size_t result = (is_power_of_2_size(x) ? x : power_of_2_size_gt(x));
-    assert(is_power_of_2_size(result));
+    cb_assert(is_power_of_2_size(result));
     return result;
 }
 
@@ -167,7 +165,7 @@ power_of_2_size_gte(size_t x)
 CB_INLINE unsigned int
 log2_of_power_of_2_size(size_t x)
 {
-    assert(is_power_of_2_size(x));
+    cb_assert(is_power_of_2_size(x));
     return 64 - clz64(x) - 1;
 }
 
@@ -178,7 +176,7 @@ log2_of_power_of_2_size(size_t x)
 CB_INLINE bool
 is_ptr_aligned_to(const void *p, size_t alignment)
 {
-    assert(is_power_of_2_size(alignment));
+    cb_assert(is_power_of_2_size(alignment));
     return ((uintptr_t)p & (alignment - 1)) == 0;
 }
 
@@ -189,7 +187,7 @@ is_ptr_aligned_to(const void *p, size_t alignment)
 CB_INLINE bool
 is_size_divisible_by(size_t dividend, size_t divisor)
 {
-    assert(divisor != 0);
+    cb_assert(divisor != 0);
     return ((dividend / divisor) * divisor) == dividend;
 }
 
@@ -201,7 +199,7 @@ is_size_divisible_by(size_t dividend, size_t divisor)
 CB_INLINE size_t
 size_multiple_gt(size_t min, size_t factor)
 {
-    assert(factor != 0);
+    cb_assert(factor != 0);
     return ((min / factor) + 1) * factor;
 }
 

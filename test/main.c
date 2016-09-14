@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include "cb.h"
 #include "cb_map.h"

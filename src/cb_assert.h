@@ -18,14 +18,25 @@
 #define _CB_ASSERT_H_
 
 #include "cb_misc.h"
+
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
-void
-cb_assert_impl(bool        b,
-               const char *str,
-               const char *func,
-               int         line);
+CB_INLINE void
+cb_assert_impl(bool b, const char *str, const char *func, int line)
+{
+    /* LCOV_EXCL_START */
+    if (!b)
+    {
+        fprintf(stderr, "Assertion \'%s\' failed. (%s():%d)\n",
+                str, func, line);
+        fflush(stderr);
+        abort();
+    }
+    /* LCOV_EXCL_STOP */
+}
 
 
 #ifdef CB_HEAVY_ASSERT_ON

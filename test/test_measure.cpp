@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <getopt.h>
 #include <inttypes.h>
 #include <math.h>

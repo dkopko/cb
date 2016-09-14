@@ -17,7 +17,6 @@
 #include "cb.h"
 #include "cb_bits.h"
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -191,7 +190,7 @@ struct cb_params CB_PARAMS_DEFAULT =
 
 CB_INLINE cb_offset_t offset_aligned_gte(cb_offset_t start, size_t alignment)
 {
-    assert(is_power_of_2_size(alignment));
+    cb_assert(is_power_of_2_size(alignment));
     return ((start - 1) | (alignment - 1)) + 1;
 }
 
@@ -200,25 +199,25 @@ CB_INLINE void cb_validate(const struct cb *cb)
 {
     (void)cb;
 
-    assert(cb->page_size != 0);
-    assert(is_power_of_2_size(cb->page_size));
+    cb_assert(cb->page_size != 0);
+    cb_assert(is_power_of_2_size(cb->page_size));
 
-    assert(is_ptr_aligned_to(cb, cb->page_size));
+    cb_assert(is_ptr_aligned_to(cb, cb->page_size));
 
-    assert(cb->header_size >= sizeof(struct cb));
-    assert(is_size_divisible_by(cb->header_size, cb->page_size));
+    cb_assert(cb->header_size >= sizeof(struct cb));
+    cb_assert(is_size_divisible_by(cb->header_size, cb->page_size));
 
-    assert(cb->loop_size >= cb->page_size);
-    assert(is_size_divisible_by(cb->loop_size, cb->page_size));
+    cb_assert(cb->loop_size >= cb->page_size);
+    cb_assert(is_size_divisible_by(cb->loop_size, cb->page_size));
 
-    assert(is_power_of_2(cb->mask + 1));
+    cb_assert(is_power_of_2(cb->mask + 1));
 
-    assert(cb_offset_lte(cb->data_start, cb->cursor));
+    cb_assert(cb_offset_lte(cb->data_start, cb->cursor));
 
-    assert(is_ptr_aligned_to(cb->link, cb->page_size));
+    cb_assert(is_ptr_aligned_to(cb->link, cb->page_size));
 
-    assert(cb->mask + 1 == cb->params.ring_size);
-    assert(is_power_of_2_size(cb->params.ring_size));
+    cb_assert(cb->mask + 1 == cb->params.ring_size);
+    cb_assert(is_power_of_2_size(cb->params.ring_size));
 }
 
 /*FIXME consolidate with cb_validate(), in a way usable from cb_map. */
@@ -254,8 +253,8 @@ static size_t ring_size_gte(size_t min_ring_size, size_t page_size)
 {
     size_t ring_size;
 
-    assert(page_size > 0);
-    assert(is_power_of_2_size(page_size));
+    cb_assert(page_size > 0);
+    cb_assert(is_power_of_2_size(page_size));
 
     ring_size = min_ring_size;
 
@@ -282,8 +281,8 @@ static size_t ring_size_gte(size_t min_ring_size, size_t page_size)
         ring_size = new_ring_size;
     }
 
-    assert(is_size_divisible_by(ring_size, page_size));
-    assert(is_power_of_2_size(ring_size));
+    cb_assert(is_size_divisible_by(ring_size, page_size));
+    cb_assert(is_power_of_2_size(ring_size));
 
     return ring_size;
 }
@@ -297,11 +296,11 @@ int cb_module_init(void)
     ret = sysconf(_SC_PAGESIZE);
     if (ret >= 0)
     {
-        assert(is_power_of_2(ret));
+        cb_assert(is_power_of_2(ret));
         cb_page_size = (size_t)ret;
         return 0;
     }
-    assert(ret == -1);
+    cb_assert(ret == -1);
     cb_log_errno("sysconf(_SC_PAGESIZE) failed.");
 #endif /* defined _SC_PAGESIZE */
 
@@ -342,12 +341,12 @@ struct cb* cb_create(struct cb_params *in_params, size_t in_params_len)
         cb_log_error("call cb_module_init() first.");
         return NULL;
     }
-    assert(is_power_of_2_size(cb_page_size));
+    cb_assert(is_power_of_2_size(cb_page_size));
 
     /* Normalize the ring_size to something adequate. */
     params.ring_size = ring_size_gte(params.ring_size, page_size);
-    assert(is_size_divisible_by(params.ring_size, page_size));
-    assert(is_power_of_2_size(params.ring_size));
+    cb_assert(is_size_divisible_by(params.ring_size, page_size));
+    cb_assert(is_power_of_2_size(params.ring_size));
 
     /* Determine header_size. */
     header_size = size_multiple_gte(sizeof(struct cb), page_size);
@@ -367,7 +366,7 @@ struct cb* cb_create(struct cb_params *in_params, size_t in_params_len)
                      params.loop_size, page_size, new_loop_size);
         params.loop_size = new_loop_size;
     }
-    assert(is_size_divisible_by(params.loop_size, page_size));
+    cb_assert(is_size_divisible_by(params.loop_size, page_size));
 
     /* Back map by file if requested. */
     if (!(params.mmap_flags & MAP_ANONYMOUS))
@@ -423,7 +422,7 @@ struct cb* cb_create(struct cb_params *in_params, size_t in_params_len)
 mmap_retry:
     if (mem != MAP_FAILED)
     {
-        assert(num_mmap_retries > 0);
+        cb_assert(num_mmap_retries > 0);
         ret = munmap(mem, header_size + params.ring_size);
         if (ret == -1)
         {
@@ -485,7 +484,7 @@ mmap_retry:
         goto fail;
     }
     cb_log_debug("mmap() (loop) succeeded. (loopmem: %p)", loopmem);
-    assert(loopmem == loop_addr);
+    cb_assert(loopmem == loop_addr);
 
     /* Close unneeded fd, if created in backed-by-file case. */
     if (fd != -1)
@@ -519,7 +518,7 @@ mmap_retry:
     memcpy(&(cb->params), &params, sizeof(cb->params));
     cb->last_command_offset = 0;
     cb->stat_wastage = 0;
-    assert(loopmem == cb_ring_end(cb));
+    cb_assert(loopmem == cb_ring_end(cb));
 
     return cb;
 
@@ -585,7 +584,7 @@ void cb_memcpy_out_short(void *dest,
                          size_t len)
 {
     /* Simple write, must be contiguous due to loop pages. */
-    assert(len < cb_loop_size(cb));
+    cb_assert(len < cb_loop_size(cb));
     memcpy(dest, cb_at(cb, offset), len);
 }
 
@@ -600,7 +599,7 @@ void cb_memcpy_out(void *dest,
     cb_validate(cb);
 
     /* Error to wrap-around copy more data than is stored. */
-    assert(len <= cb_ring_size(cb));
+    cb_assert(len <= cb_ring_size(cb));
     //FIXME logerr?
 
     if (len < cb_loop_size(cb))
@@ -635,7 +634,7 @@ void cb_memcpy_in_short(struct cb *cb, cb_offset_t offset,
                         size_t len)
 {
     /* Simple write, must be contiguous due to loop pages. */
-    assert(len < cb_loop_size(cb));
+    cb_assert(len < cb_loop_size(cb));
     memcpy(cb_at(cb, offset), src, len);
 }
 
@@ -653,7 +652,7 @@ void cb_memcpy_in(struct cb *cb, cb_offset_t offset,
      * This function shouldn't resize, nor should it be expected to handle
      * wrap-around writes which overlap with themselves.
      */
-    assert(len <= cb_ring_size(cb));
+    cb_assert(len <= cb_ring_size(cb));
 
     if (len < cb_loop_size(cb))
     {
@@ -692,8 +691,8 @@ void cb_memcpy(struct cb *dest_cb, cb_offset_t dest_offset,
 
     cb_validate(src_cb);
     cb_validate(dest_cb);
-    assert(len <= cb_ring_size(src_cb));
-    assert(len <= cb_ring_size(dest_cb));
+    cb_assert(len <= cb_ring_size(src_cb));
+    cb_assert(len <= cb_ring_size(dest_cb));
 
     src_start  = cb_at(src_cb, src_offset);
     dest_start = cb_at(dest_cb, dest_offset);
@@ -703,14 +702,14 @@ void cb_memcpy(struct cb *dest_cb, cb_offset_t dest_offset,
     src_upper_frag_len  = (char*)cb_loop_end(src_cb) - (char*)src_start;
     dest_upper_frag_len = (char*)cb_loop_end(dest_cb) - (char*)dest_start;
 
-    assert((src_end = cb_at(src_cb, src_offset + len),
-            len <= src_upper_frag_len + cb_loop_size(src_cb) ||
-            src_start > src_end ||
-            (src_start == src_end && src_start != cb_ring_start(src_cb))));
-    assert((dest_end = cb_at(dest_cb, dest_offset + len),
-            len <= dest_upper_frag_len + cb_loop_size(src_cb) ||
-            dest_start > dest_end ||
-            (dest_start == dest_end && dest_start != cb_ring_start(dest_cb))));
+    cb_assert((src_end = cb_at(src_cb, src_offset + len),
+               len <= src_upper_frag_len + cb_loop_size(src_cb) ||
+               src_start > src_end ||
+               (src_start == src_end && src_start != cb_ring_start(src_cb))));
+    cb_assert((dest_end = cb_at(dest_cb, dest_offset + len),
+               len <= dest_upper_frag_len + cb_loop_size(src_cb) ||
+               dest_start > dest_end ||
+               (dest_start == dest_end && dest_start != cb_ring_start(dest_cb))));
 
     /*
      * This section is essentially an unrolled sort of a three-element frag

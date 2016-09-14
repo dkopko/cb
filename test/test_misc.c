@@ -1,4 +1,6 @@
 #include "cb_bits.h"
+#include "cb_misc.h"
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

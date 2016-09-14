@@ -17,8 +17,9 @@
 #ifndef _CB_H_
 #define _CB_H_
 
+#include "cb_assert.h"
 #include "cb_misc.h"
-#include <assert.h>
+
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -52,12 +53,6 @@ void cb_log_impl(enum cb_log_level lvl, const char *fmt, ...);
 #define cb_log_debug(FMT, ARGS...) cb_log(CB_LOG_DEBUG, FMT, ##ARGS)
 #else
 #define cb_log_debug(FMT, ARGS...) do { } while(0)
-#endif
-
-#ifdef CB_HEAVY_ASSERT
-#define heavy_assert assert
-#else
-#define heavy_assert(X) do { } while(0)
 #endif
 
 
@@ -214,7 +209,7 @@ CB_INLINE cb_offset_t cb_cursor(const struct cb *cb)
 
 CB_INLINE void cb_rewind_to(struct cb *cb, cb_offset_t offset)
 {
-    assert(cb_offset_lte(offset, cb->cursor));
+    cb_assert(cb_offset_lte(offset, cb->cursor));
     cb->cursor = offset;
 }
 
@@ -228,10 +223,10 @@ CB_INLINE size_t cb_free_size(const struct cb *cb)
 CB_INLINE void* cb_at(const struct cb *cb, cb_offset_t offset)
 {
     /* offset >= data_start */
-    assert(cb_offset_cmp(offset, cb->data_start) > -1);
+    cb_assert(cb_offset_cmp(offset, cb->data_start) > -1);
 
     /* offset <= data_end */
-    assert(cb_offset_cmp(offset, cb->data_start + cb_ring_size(cb)) < 1);
+    cb_assert(cb_offset_cmp(offset, cb->data_start + cb_ring_size(cb)) < 1);
 
     return (char*)cb_ring_start(cb) + (offset & cb->mask);
 }
@@ -239,8 +234,8 @@ CB_INLINE void* cb_at(const struct cb *cb, cb_offset_t offset)
 
 CB_INLINE cb_offset_t cb_from(const struct cb *cb, const void *addr)
 {
-    assert((char*)addr >= (char*)cb_ring_start(cb));
-    assert((char*)addr <= (char*)cb_ring_end(cb));
+    cb_assert((char*)addr >= (char*)cb_ring_start(cb));
+    cb_assert((char*)addr <= (char*)cb_ring_end(cb));
 
     return cb->data_start + ((char*)addr - (char*)cb_ring_start(cb));
 }
