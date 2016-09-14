@@ -459,62 +459,6 @@ cb_bst_select_modifiable_node(struct cb          **cb,
 }
 
 
-/* direction: 0="left", 1="right" */
-static int
-cb_bst_rotate(struct cb   **cb,
-              cb_offset_t   cutoff_offset,
-              cb_offset_t  *target_node_offset,
-              int           direction)
-{
-    cb_offset_t         demoted_node_offset;
-    struct cb_bst_node *demoted_node;
-    cb_offset_t         promoted_child_offset;
-    struct cb_bst_node *promoted_child_node;
-    int ret;
-
-    cb_assert(direction == 0 || direction == 1);
-
-    demoted_node_offset = *target_node_offset;
-    demoted_node        = cb_bst_node_at(*cb, demoted_node_offset);
-
-    cb_log_debug("rotating %s at node offset %ju { k: %ju, v: %ju, color: %s, left: %ju, right: %ju }",
-                 direction == 0 ? "LEFT" : "RIGHT",
-                 demoted_node_offset,
-                 (uintmax_t)demoted_node->key.k,
-                 (uintmax_t)demoted_node->value.v,
-                 demoted_node->color == CB_BST_RED ? "RED" : "BLACK",
-                 (uintmax_t)demoted_node->child[0],
-                 (uintmax_t)demoted_node->child[1]);
-
-    promoted_child_offset = demoted_node->child[!direction];
-    cb_assert(promoted_child_offset != CB_BST_SENTINEL);
-
-    ret = cb_bst_select_modifiable_node(cb,
-                                        cutoff_offset,
-                                        &demoted_node_offset);
-    if (ret != 0)
-        return ret;
-
-    ret = cb_bst_select_modifiable_node(cb,
-                                        cutoff_offset,
-                                        &promoted_child_offset);
-    if (ret != 0)
-        return ret;
-
-    /* Selecting modifiable nodes may have updated cb, so resample our
-       pointers. */
-    demoted_node        = cb_bst_node_at(*cb, demoted_node_offset);
-    promoted_child_node = cb_bst_node_at(*cb, promoted_child_offset);
-
-    demoted_node->child[!direction] = promoted_child_node->child[direction];
-    promoted_child_node->child[direction] = demoted_node_offset;
-
-    *target_node_offset = promoted_child_offset;
-
-    return 0;
-}
-
-
 CB_INLINE bool
 cb_bst_node_is_red(const struct cb *cb,
                    cb_offset_t      node_offset)
