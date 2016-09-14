@@ -14,39 +14,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with CB.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _CB_ASSERT_H_
-#define _CB_ASSERT_H_
-
-#include "cb_misc.h"
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef _CB_MISC_H_
+#define _CB_MISC_H_
 
 
-CB_INLINE void
-cb_assert_impl(bool b, const char *str)
-{
-    //FIXME add __FILE__, __LINE__, __FUNCTION__
+#define BITS_PER_BYTE 8
 
-    /* LCOV_EXCL_START */
-    if (!b)
-    {
-        fprintf(stderr, "Assertion \'%s\' failed.", str);
-        fflush(stderr);
-        abort();
-    }
-    /* LCOV_EXCL_STOP */
-}
+#define likely(e)   __builtin_expect(!!(e), 1)
+#define unlikely(e) __builtin_expect((e), 0)
 
-#ifdef CB_ASSERT_ON
-#define cb_assert(X) cb_assert_impl(X, #X)
-#else
-#define cb_assert(X) do { } while(0)
-#endif
+#define CB_INLINE static inline
 
-#ifdef CB_HEAVY_ASSERT_ON
-#define cb_heavy_assert(X) cb_assert_impl(X, #X)
-#else
-#define cb_heavy_assert(X) do { } while(0)
-#endif
+#define cb_alignof(x) (__alignof__(x))
 
-#endif /* ! defined _CB_ASSERT_H_*/
+
+#endif /* _CB_MISC_H_ */

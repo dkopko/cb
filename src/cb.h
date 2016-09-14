@@ -17,6 +17,7 @@
 #ifndef _CB_H_
 #define _CB_H_
 
+#include "cb_misc.h"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -32,9 +33,6 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-
-#define CB_INLINE inline __attribute__((always_inline))
-#define cb_alignof(x) (__alignof__(x))
 
 enum cb_log_level
 {
