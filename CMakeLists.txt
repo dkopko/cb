@@ -6,6 +6,7 @@ option(COVERAGE "Build with test coverage" OFF)
 
 set(CB_SOURCES
   "${CMAKE_SOURCE_DIR}/src/cb.c"
+  "${CMAKE_SOURCE_DIR}/src/cb_assert.c"
   "${CMAKE_SOURCE_DIR}/src/cb_interpreter.c"
   "${CMAKE_SOURCE_DIR}/src/cb_lb_set.c"
   "${CMAKE_SOURCE_DIR}/src/cb_map.c"
@@ -60,6 +61,11 @@ set_target_properties(test_misc PROPERTIES
 add_executable(test_main "${CMAKE_SOURCE_DIR}/test/main.c")
 target_link_libraries(test_main libcb_static)
 set_target_properties(test_main PROPERTIES
+    LINKER_LANGUAGE C)
+
+add_executable(test_assert "${CMAKE_SOURCE_DIR}/test/test_assert.c")
+target_link_libraries(test_assert libcb_static)
+set_target_properties(test_assert PROPERTIES
     LINKER_LANGUAGE C)
 
 add_executable(test_lb_set "${CMAKE_SOURCE_DIR}/test/test_lb_set.cpp")
