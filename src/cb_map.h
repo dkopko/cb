@@ -19,38 +19,9 @@
 
 #include "cb.h"
 
-/* Immediate version */
-
-/*
- * There is no equivalent of "NULL" for cb_offset_t, so we use an invalid
- * value as the sentinel.  The reason that the value of 1 is invalid is because
- * the offsets of cb_bst_node structs must have an alignment greater than
- * char-alignment, but 1 is not aligned to anything greater than char
- * alignment.  Declared as an enum for use as a constant.
- */
-enum
-{
-    CB_BST_SENTINEL = 1
-};
-
-int cb_bst_insert(struct cb             **cb,
-                  cb_offset_t            *root_node_offset,
-                  cb_offset_t             cutoff_offset,
-                  const struct cb_key    *key,
-                  const struct cb_value  *value);
-
-int cb_bst_lookup(const struct cb     *cb,
-                  cb_offset_t          root_node_offset,
-                  const struct cb_key *key,
-                  struct cb_value     *value);
-
-int cb_bst_delete(struct cb             **cb,
-                  cb_offset_t            *root_node_offset,
-                  cb_offset_t             cutoff_offset,
-                  const struct cb_key    *key);
-
 
 /* Lazy version */
+
 struct cb_map
 {
     struct cb   **cb;

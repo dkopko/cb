@@ -6,6 +6,7 @@ option(COVERAGE "Build with test coverage" OFF)
 
 set(CB_SOURCES
   "${CMAKE_SOURCE_DIR}/src/cb.c"
+  "${CMAKE_SOURCE_DIR}/src/cb_bst.c"
   "${CMAKE_SOURCE_DIR}/src/cb_interpreter.c"
   "${CMAKE_SOURCE_DIR}/src/cb_lb_set.c"
   "${CMAKE_SOURCE_DIR}/src/cb_map.c"

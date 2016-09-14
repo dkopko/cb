@@ -11,6 +11,7 @@
 namespace {
 extern "C" {
 #include "cb.h"
+#include "cb_bst.h"
 #include "cb_map.h"
 #include "cb_random.h"
 };
