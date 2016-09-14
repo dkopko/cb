@@ -85,7 +85,7 @@ function do_coverage_tests()
     lcov --directory "${BUILD_ROOT}"/Coverage --zerocounters --rc lcov_branch_coverage=1
 
     # Run tests
-    "${BUILD_ROOT}"/Coverage/test_measure >/dev/null 2>&1
+    "${BUILD_ROOT}"/Coverage/test_measure --event-count=1000 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
 
     # Produce coverage webpages.
     lcov --directory "${BUILD_ROOT}"/Coverage --capture --output-file "${coverage_file}" --rc lcov_branch_coverage=1
@@ -140,7 +140,7 @@ function generate_map_flamegraphs()
     pushd "${test_root}"
 
     perf record -F 1000 -a -g -- \
-        "${BUILD_ROOT}"/Debug/test_measure --ring-size=134217728 --ratios 1,1,1,1,1,1 >"${outfile}" 2>&1
+        "${BUILD_ROOT}"/Debug/test_measure --ring-size=134217728 --ratios=1,1,1,1,1,1 >"${outfile}" 2>&1
     perf script |_omit_offsets |stackcollapse-perf.pl --kernel >"${foldedfile}"
     gzip perf.data
 
@@ -175,7 +175,7 @@ function generate_map_latency_plots()
     mkdir "${test_root}"
     pushd "${test_root}"
 
-    "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 --ratios 1,1,1,1,1,1 >"${outfile}" 2>&1
+    "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 --ratios=1,1,1,1,1,1 >"${outfile}" 2>&1
     "${SCRIPTS_ROOT}/plot_measure.py" "${outfile}"
 
     ls -l "${test_root}"/map-*-* >"${test_root}/used_maps"
