@@ -1324,7 +1324,7 @@ cb_bst_delete_case1(struct cb                  **cb,
     cb_log_debug("delete case1 @ curr_node_offset: %ju",
                  (uintmax_t)s->curr_node_offset);
 
-    /* Check pre-conditions */
+    /* Check pre-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
     cb_assert(cb_bst_node_is_modifiable(s->parent_node_offset, s->cutoff_offset));
     cb_assert(cb_bst_node_is_modifiable(s->curr_node_offset, s->cutoff_offset));
@@ -1389,16 +1389,16 @@ cb_bst_delete_case1(struct cb                  **cb,
     s->curr_node_offset          = node2_offset;
     s->sibling_node_offset       = cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir];
 
-    /* Check post-conditions */
+    /* Check post-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
     cb_assert(s->sibling_node_offset != CB_BST_SENTINEL);
     cb_assert(cb_bst_node_is_red(*cb, s->grandparent_node_offset));
     cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
-    /* e is black */
+    /* e is black. */
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->grandparent_node_offset)->child[!s->grandparent_to_parent_dir]));
     cb_assert(cb_bst_node_is_red(*cb, s->curr_node_offset));
-    /* d is black */
+    /* d is black. */
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]));
     cb_assert(cb_bst_node_is_black(*cb, cb_bst_node_at(*cb, s->curr_node_offset)->child[0]));
@@ -1446,7 +1446,7 @@ cb_bst_delete_case2(struct cb                  **cb,
 
     cb_log_debug("delete case2 @ %ju", (uintmax_t)s->curr_node_offset);
 
-    /* Check pre-conditions */
+    /* Check pre-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
     cb_assert(cb_bst_node_is_modifiable(s->parent_node_offset, s->cutoff_offset));
     cb_assert(cb_bst_node_is_modifiable(s->curr_node_offset, s->cutoff_offset));
@@ -1519,19 +1519,19 @@ cb_bst_delete_case2(struct cb                  **cb,
     s->grandparent_to_parent_dir = s->parent_to_curr_dir;
     s->sibling_node_offset       = c_node_offset;
 
-    /* Check post-conditions */
+    /* Check post-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
     cb_assert(s->sibling_node_offset != CB_BST_SENTINEL);
     cb_assert(cb_bst_node_is_red(*cb, s->grandparent_node_offset));
     cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
-    /* 4 is black */
+    /* 4 is black. */
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->grandparent_node_offset)->child[!s->grandparent_to_parent_dir]));
     cb_assert(cb_bst_node_is_red(*cb, s->curr_node_offset));
-    /* c is black */
+    /* c is black. */
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]));
-    /* d is black */
+    /* d is black. */
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->grandparent_node_offset)->child[!s->grandparent_to_parent_dir])->child[s->grandparent_to_parent_dir]));
     cb_assert(cb_bst_node_is_black(*cb,
@@ -1580,7 +1580,7 @@ cb_bst_delete_case4(struct cb                  **cb,
 
     cb_log_debug("delete case4 @ %ju", (uintmax_t)s->curr_node_offset);
 
-    /* Check pre-conditions */
+    /* Check pre-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
     cb_assert(cb_bst_node_is_modifiable(s->parent_node_offset, s->cutoff_offset));
     cb_assert(cb_bst_node_is_modifiable(s->curr_node_offset, s->cutoff_offset));
@@ -1654,19 +1654,19 @@ cb_bst_delete_case4(struct cb                  **cb,
     s->grandparent_to_parent_dir = s->parent_to_curr_dir;
     s->sibling_node_offset       = c_node_offset;
 
-    /* Check post-conditions */
+    /* Check post-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
     cb_assert(s->sibling_node_offset != CB_BST_SENTINEL);
     cb_assert(cb_bst_node_is_red(*cb, s->grandparent_node_offset));
     cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
-    /* 4 is black */
+    /* 4 is black. */
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->grandparent_node_offset)->child[!s->grandparent_to_parent_dir]));
     cb_assert(cb_bst_node_is_red(*cb, s->curr_node_offset));
-    /* d is black */
+    /* d is black. */
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->grandparent_node_offset)->child[!s->grandparent_to_parent_dir])->child[s->parent_to_curr_dir]));
-    /* e is black */
+    /* e is black. */
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->grandparent_node_offset)->child[!s->grandparent_to_parent_dir])->child[s->parent_to_curr_dir]));
     cb_assert(cb_bst_node_is_black(*cb,
@@ -1683,14 +1683,14 @@ cb_bst_delete_case5(struct cb                  **cb,
                     struct cb_bst_mutate_state  *s)
 {
     /*
-      parent      3,R                    3,B
-                 /   \                  /   \
-                /     \                /     \
-      curr    1,B     5,B    =>      1,R     5,R
-              / \     / \            / \     / \
-            0,B 2,B 4,B 6,B        0,B 2,B 4,B 6,B
-            / \ / \ / \ / \        / \ / \ / \ / \
-            a b c d e f g h        a b c d e f g h
+     *         parent 3,R                        parent 3,B
+     *               /   \                             /   \
+     *              /     \                           /     \
+     *       curr 1,B     5,B sibling    =>    curr 1,R     5,R sibling
+     *            / \     / \                       / \     / \
+     *          0,B 2,B 4,B 6,B                   0,B 2,B 4,B 6,B
+     *          / \ / \ / \ / \                   / \ / \ / \ / \
+     *          a b c d e f g h                   a b c d e f g h
      */
 
     cb_offset_t node1_offset,
@@ -1706,53 +1706,45 @@ cb_bst_delete_case5(struct cb                  **cb,
 
     cb_log_debug("delete case5 @ %ju", (uintmax_t)s->curr_node_offset);
 
-    /* Check pre-conditions */
+    /* Check pre-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
-    cb_assert(s->sibling_node_offset == cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]);
-    cb_assert(cb_bst_node_is_black(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]));
-    cb_assert(cb_bst_node_is_black(*cb, s->sibling_node_offset));
+    cb_assert(cb_bst_node_is_modifiable(s->parent_node_offset, s->cutoff_offset));
+    cb_assert(cb_bst_node_is_modifiable(s->curr_node_offset, s->cutoff_offset));
+    cb_assert(s->parent_node_offset != CB_BST_SENTINEL);
+    cb_assert(s->curr_node_offset != CB_BST_SENTINEL);
+    cb_assert(s->sibling_node_offset != CB_BST_SENTINEL);
     cb_assert(cb_bst_node_is_red(*cb, s->parent_node_offset));
     cb_assert(cb_bst_node_is_black(*cb, s->curr_node_offset));
-    cb_assert(cb_bst_node_is_black(*cb,
-        cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]));
-    cb_assert(s->curr_node_offset != CB_BST_SENTINEL);
+    cb_assert(cb_bst_node_is_black(*cb, s->sibling_node_offset));
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->curr_node_offset)->child[0]));
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->curr_node_offset)->child[1]));
-    cb_assert(s->sibling_node_offset ==
-        cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]);
-    cb_assert(s->sibling_node_offset != CB_BST_SENTINEL);
-    cb_assert(cb_bst_node_is_black(*cb, s->sibling_node_offset));
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->sibling_node_offset)->child[0]));
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->sibling_node_offset)->child[1]));
 
+    /* Extract in-motion node offsets. */
     node1_offset     = s->curr_node_offset;
     node3_offset     = s->parent_node_offset;
     old_node5_offset = s->sibling_node_offset;
 
-    cb_assert(cb_bst_node_is_black(*cb, node1_offset));
-    cb_assert(cb_bst_node_is_red(*cb, node3_offset));
-    cb_assert(cb_bst_node_is_black(*cb, old_node5_offset));
-
-    /* Allocated traversal-contiguous. */
+    /* Allocate rewritten node. */
+    /* OPTIM do this by selecting modifiable w/o copy? */
     ret = cb_bst_node_alloc(cb, &new_node5_offset);
     if (ret != 0)
         return ret;
 
+    /* Perform the delete case 4. */
     node1     = cb_bst_node_at(*cb, node1_offset);
     node3     = cb_bst_node_at(*cb, node3_offset);
     old_node5 = cb_bst_node_at(*cb, old_node5_offset);
     new_node5 = cb_bst_node_at(*cb, new_node5_offset);
 
-    cb_assert(cb_bst_node_is_modifiable(node1_offset, s->cutoff_offset));
     node1->color = CB_BST_RED;
 
-    cb_assert(cb_bst_node_is_modifiable(node3_offset, s->cutoff_offset));
     node3->color = CB_BST_BLACK;
-    cb_assert(node3->child[s->parent_to_curr_dir] == node1_offset);
     node3->child[!s->parent_to_curr_dir] = new_node5_offset;
 
     cb_key_assign(&(new_node5->key), &(old_node5->key));
@@ -1761,25 +1753,22 @@ cb_bst_delete_case5(struct cb                  **cb,
     new_node5->child[0] = old_node5->child[0];
     new_node5->child[1] = old_node5->child[1];
 
-
-    /* Maintain iterator. */
-    s->sibling_node_offset     = new_node5_offset;
+    /* Maintain the mutation iterator state. */
+    s->sibling_node_offset = new_node5_offset;
 
     /* Check post-conditions */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
-    cb_assert(s->sibling_node_offset == cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]);
     cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
     cb_assert(cb_bst_node_is_red(*cb, s->curr_node_offset));
+    cb_assert(cb_bst_node_is_red(*cb, s->sibling_node_offset));
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->curr_node_offset)->child[0]));
     cb_assert(cb_bst_node_is_black(*cb,
         cb_bst_node_at(*cb, s->curr_node_offset)->child[1]));
-    cb_assert(cb_bst_node_is_red(*cb,
-        cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]));
     cb_assert(cb_bst_node_is_black(*cb,
-        cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir])->child[0]));
+        cb_bst_node_at(*cb, s->sibling_node_offset)->child[0]));
     cb_assert(cb_bst_node_is_black(*cb,
-        cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir])->child[1]));
+        cb_bst_node_at(*cb, s->sibling_node_offset)->child[1]));
 
     return 0;
 }
@@ -1963,7 +1952,7 @@ descend:
     }
 
 
-    /*FIXME We break the loop at a sentinel, having unnecessarily created
+    /* OPTIM We break the loop at a sentinel, having unnecessarily created
       a modifiable copy of the preceding red "leaf", only to remove it.
       Optimize this? */
     if (found_node_offset == CB_BST_SENTINEL)
