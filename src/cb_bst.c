@@ -673,18 +673,18 @@ struct cb_bst_insert_state
 };
 
 
-struct cb_bst_delete_state
-{
-    cb_offset_t grandparent_node_offset;
-    cb_offset_t parent_node_offset;
-    cb_offset_t curr_node_offset;
-    cb_offset_t sibling_node_offset;
-    cb_offset_t new_root_node_offset;
-    cb_offset_t cutoff_offset;
-    int         grandparent_to_parent_dir;
-    int         parent_to_curr_dir;
-    int         dir;
-};
+static const struct cb_bst_insert_state CB_BST_INSERT_STATE_INIT =
+    {
+        .greatgrandparent_node_offset        = CB_BST_SENTINEL,
+        .grandparent_node_offset             = CB_BST_SENTINEL,
+        .parent_node_offset                  = CB_BST_SENTINEL,
+        .curr_node_offset                    = CB_BST_SENTINEL,
+        .new_root_node_offset                = CB_BST_SENTINEL,
+        .cutoff_offset                       = CB_BST_SENTINEL,
+        .greatgrandparent_to_grandparent_dir = 1,
+        .grandparent_to_parent_dir           = 1,
+        .parent_to_curr_dir                  = 1
+    };
 
 
 static bool cb_bst_insert_state_validate(struct cb                  *cb,
@@ -817,6 +817,52 @@ cb_bst_print_insert(const struct cb            *cb,
 }
 
 
+struct cb_bst_delete_state
+{
+    cb_offset_t grandparent_node_offset;
+    cb_offset_t parent_node_offset;
+    cb_offset_t curr_node_offset;
+    cb_offset_t sibling_node_offset;
+    cb_offset_t new_root_node_offset;
+    cb_offset_t cutoff_offset;
+    int         grandparent_to_parent_dir;
+    int         parent_to_curr_dir;
+    int         dir;
+};
+
+
+static const struct cb_bst_delete_state CB_BST_DELETE_STATE_INIT =
+    {
+        .grandparent_node_offset             = CB_BST_SENTINEL,
+        .parent_node_offset                  = CB_BST_SENTINEL,
+        .curr_node_offset                    = CB_BST_SENTINEL,
+        .sibling_node_offset                 = CB_BST_SENTINEL,
+        .new_root_node_offset                = CB_BST_SENTINEL,
+        .cutoff_offset                       = CB_BST_SENTINEL,
+        .grandparent_to_parent_dir           = 1,
+        .parent_to_curr_dir                  = 1
+    };
+
+
+static bool
+cb_bst_delete_state_validate(struct cb                  *cb,
+                             struct cb_bst_delete_state *s)
+{
+    (void)cb, (void)s;
+
+    cb_assert(s->grandparent_node_offset == CB_BST_SENTINEL ||
+           cb_bst_node_at(cb, s->grandparent_node_offset)->child[
+               s->grandparent_to_parent_dir] == s->parent_node_offset);
+    cb_assert(s->parent_node_offset == CB_BST_SENTINEL ||
+           cb_bst_node_at(cb, s->parent_node_offset)->child[
+               s->parent_to_curr_dir] == s->curr_node_offset);
+    cb_assert(s->sibling_node_offset == CB_BST_SENTINEL ||
+           cb_bst_node_at(cb, s->parent_node_offset)->child[
+               !s->parent_to_curr_dir] == s->sibling_node_offset);
+    return true;
+}
+
+
 static void
 cb_bst_print_delete0(const struct cb            *cb,
                      cb_offset_t                 node_offset,
@@ -888,50 +934,6 @@ cb_bst_print_delete(const struct cb            *cb,
 {
     cb_bst_print_delete0(cb, s->new_root_node_offset, 0, s);
 }
-
-
-static bool
-cb_bst_delete_state_validate(struct cb                  *cb,
-                             struct cb_bst_delete_state *s)
-{
-    (void)cb, (void)s;
-
-    cb_assert(s->grandparent_node_offset == CB_BST_SENTINEL ||
-           cb_bst_node_at(cb, s->grandparent_node_offset)->child[
-               s->grandparent_to_parent_dir] == s->parent_node_offset);
-    cb_assert(s->parent_node_offset == CB_BST_SENTINEL ||
-           cb_bst_node_at(cb, s->parent_node_offset)->child[
-               s->parent_to_curr_dir] == s->curr_node_offset);
-    //FIXME check sibling_node_offset?
-    return true;
-}
-
-
-static const struct cb_bst_insert_state CB_BST_INSERT_STATE_INIT =
-    {
-        .greatgrandparent_node_offset        = CB_BST_SENTINEL,
-        .grandparent_node_offset             = CB_BST_SENTINEL,
-        .parent_node_offset                  = CB_BST_SENTINEL,
-        .curr_node_offset                    = CB_BST_SENTINEL,
-        .new_root_node_offset                = CB_BST_SENTINEL,
-        .cutoff_offset                       = CB_BST_SENTINEL,
-        .greatgrandparent_to_grandparent_dir = 1,
-        .grandparent_to_parent_dir           = 1,
-        .parent_to_curr_dir                  = 1
-    };
-
-
-static const struct cb_bst_delete_state CB_BST_DELETE_STATE_INIT =
-    {
-        .grandparent_node_offset             = CB_BST_SENTINEL,
-        .parent_node_offset                  = CB_BST_SENTINEL,
-        .curr_node_offset                    = CB_BST_SENTINEL,
-        .sibling_node_offset                 = CB_BST_SENTINEL, /*FIXME can remove?*/
-        .new_root_node_offset                = CB_BST_SENTINEL,
-        .cutoff_offset                       = CB_BST_SENTINEL,
-        .grandparent_to_parent_dir           = 1,
-        .parent_to_curr_dir                  = 1
-    };
 
 
 static int
