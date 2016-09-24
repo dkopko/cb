@@ -1901,7 +1901,10 @@ entry:
         }
 
         /* CASE 2  - "Current's Near Nephew is Red" */
-        /* Since curr is a non-sentinel black node, it must have a sibling. */
+        /*
+         * Since curr is a non-CB_BST_SENTINEL black node, it must have a
+         * non-CB_BST_SENTINEL sibling.
+         */
         s.sibling_node_offset =
             cb_bst_node_at(*cb, s.parent_node_offset)->child[!s.parent_to_curr_dir];
         cb_assert(s.sibling_node_offset != CB_BST_SENTINEL);
@@ -1935,6 +1938,7 @@ entry:
                 goto fail;
         }
 
+        /* The following arrangement can never happen. */
         cb_assert(!(cb_bst_node_is_black(*cb, s.curr_node_offset) &&
                     cb_bst_node_is_red(*cb, s.parent_node_offset) &&
                     cb_bst_node_is_red(*cb, s.parent_node_offset)));
