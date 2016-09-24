@@ -1935,13 +1935,9 @@ entry:
                 goto fail;
         }
 
-        if (cb_bst_node_is_black(*cb, s.curr_node_offset) &&
-            cb_bst_node_is_red(*cb, s.parent_node_offset) &&
-            cb_bst_node_is_red(*cb, s.parent_node_offset))
-        {
-            cb_log_error("Unhandled delete case.");
-            abort();
-        }
+        cb_assert(!(cb_bst_node_is_black(*cb, s.curr_node_offset) &&
+                    cb_bst_node_is_red(*cb, s.parent_node_offset) &&
+                    cb_bst_node_is_red(*cb, s.parent_node_offset)));
 
 descend:
         cb_assert(s.parent_to_curr_dir == 0 || s.parent_to_curr_dir == 1);
