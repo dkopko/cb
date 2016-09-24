@@ -1403,7 +1403,6 @@ cb_bst_delete_case1(struct cb                  **cb,
 
     /* Check post-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
-    cb_assert(s->sibling_node_offset != CB_BST_SENTINEL);
     cb_assert(cb_bst_node_is_red(*cb, s->grandparent_node_offset));
     cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
     /* e is black. */
@@ -1533,7 +1532,6 @@ cb_bst_delete_case2(struct cb                  **cb,
 
     /* Check post-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
-    cb_assert(s->sibling_node_offset != CB_BST_SENTINEL);
     cb_assert(cb_bst_node_is_red(*cb, s->grandparent_node_offset));
     cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
     /* 4 is black. */
@@ -1668,7 +1666,6 @@ cb_bst_delete_case4(struct cb                  **cb,
 
     /* Check post-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
-    cb_assert(s->sibling_node_offset != CB_BST_SENTINEL);
     cb_assert(cb_bst_node_is_red(*cb, s->grandparent_node_offset));
     cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
     /* 4 is black. */
