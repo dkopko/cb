@@ -778,13 +778,13 @@ cb_bst_red_pair_fixup_single(struct cb                  **cb,
                              struct cb_bst_mutate_state  *s)
 {
     /*
-      grandparent 3,B       parent 2,B
-                  / \              / \
-         parent 2,R  d  =>  curr 1,R 3,R
-                / \              / \ / \
-         curr 1,R  c            a  b c  d
-              / \
-             a   b
+     *    grandparent 3,B         parent 2,B
+     *                / \                / \
+     *       parent 2,R  d    =>  curr 1,R 3,R
+     *              / \                / \ / \
+     *       curr 1,R  c              a  b c  d
+     *            / \
+     *           a   b
      */
 
     cb_offset_t c_node_offset,
@@ -862,7 +862,13 @@ cb_bst_red_pair_fixup_single(struct cb                  **cb,
 
     /* Check post-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
-    /* FIXME check more? */
+    cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
+    cb_assert(cb_bst_node_is_red(*cb, s->curr_node_offset));
+    cb_assert(cb_bst_node_is_red(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]));
+    cb_assert(cb_bst_node_is_black(*cb,
+        cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir])->child[0]));
+    cb_assert(cb_bst_node_is_black(*cb,
+        cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir])->child[1]));
 
     return 0;
 }
@@ -987,7 +993,13 @@ cb_bst_red_pair_fixup_double(struct cb                  **cb,
 
     /* Check post-conditions. */
     cb_assert(cb_bst_mutate_state_validate(*cb, s));
-    /* FIXME add more post-conditions? */
+    cb_assert(cb_bst_node_is_black(*cb, s->parent_node_offset));
+    cb_assert(cb_bst_node_is_red(*cb, s->curr_node_offset));
+    cb_assert(cb_bst_node_is_red(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir]));
+    cb_assert(cb_bst_node_is_black(*cb,
+        cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir])->child[0]));
+    cb_assert(cb_bst_node_is_black(*cb,
+        cb_bst_node_at(*cb, cb_bst_node_at(*cb, s->parent_node_offset)->child[!s->parent_to_curr_dir])->child[1]));
 
     return 0;
 }
