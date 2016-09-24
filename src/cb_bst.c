@@ -677,6 +677,40 @@ fail:
 
 
 static int
+cb_bst_select_modifiable_node_raw(struct cb          **cb,
+                                  cb_offset_t          cutoff_offset,
+                                  cb_offset_t         *node_offset)
+{
+    /* If the node we are trying to modify has been freshly created, then it is
+       safe to modify it in place.  Otherwise, a copy will be made and we will
+       need to rewrite its parentage.  The cutoff_offset is the offset at which
+       the unmodifiable to modifiable transition happens, with nodes prior
+       to the offset requiring a new node to be allocated. */
+    cb_offset_t         old_node_offset,
+                        new_node_offset;
+    int ret;
+
+    old_node_offset = *node_offset;
+
+    if (cb_bst_node_is_modifiable(old_node_offset, cutoff_offset))
+        return 0;
+
+    /*
+     * The provided node is unmodifiable, so a new one is allocated and left
+     * uninitialized.
+     * */
+
+    ret = cb_bst_node_alloc(cb, &new_node_offset);
+    if (ret != 0)
+        return ret;
+
+    *node_offset = new_node_offset;
+
+    return 0;
+}
+
+
+static int
 cb_bst_select_modifiable_node(struct cb          **cb,
                               cb_offset_t          cutoff_offset,
                               cb_offset_t         *node_offset)
@@ -1364,9 +1398,11 @@ cb_bst_delete_case1(struct cb                  **cb,
     d_node_offset    = cb_bst_node_at(*cb, old_node3_offset)->child[!s->dir];
     e_node_offset    = cb_bst_node_at(*cb, node4_offset)->child[!s->parent_to_curr_dir];
 
-    /* Allocate rewritten node. */
-    /* OPTIM do this by selecting modifiable w/o copy? */
-    ret = cb_bst_node_alloc(cb, &new_node3_offset);
+    /* Obtain suitable node for writing. */
+    new_node3_offset = old_node3_offset;
+    ret = cb_bst_select_modifiable_node_raw(cb,
+                                            s->cutoff_offset,
+                                            &new_node3_offset);
     if (ret != 0)
         return ret;
 
@@ -1487,12 +1523,17 @@ cb_bst_delete_case2(struct cb                  **cb,
     d_node_offset    = cb_bst_node_at(*cb, old_node3_offset)->child[!s->parent_to_curr_dir];
     e_node_offset    = cb_bst_node_at(*cb, old_node4_offset)->child[!s->parent_to_curr_dir];
 
-    /* Allocate rewritten nodes, traversal-contiguous. */
-    /* OPTIM do this by selecting modifiable w/o copy? */
-    ret = cb_bst_node_alloc(cb, &new_node3_offset);
+    /* Obtain suitable nodes for rewrite, traversal-contiguous. */
+    new_node3_offset = old_node3_offset;
+    ret = cb_bst_select_modifiable_node_raw(cb,
+                                            s->cutoff_offset,
+                                            &new_node3_offset);
     if (ret != 0)
         return ret;
-    ret = cb_bst_node_alloc(cb, &new_node4_offset);
+    new_node4_offset = old_node4_offset;
+    ret = cb_bst_select_modifiable_node_raw(cb,
+                                            s->cutoff_offset,
+                                            &new_node4_offset);
     if (ret != 0)
         return ret;
 
@@ -1622,15 +1663,21 @@ cb_bst_delete_case4(struct cb                  **cb,
     d_node_offset    = cb_bst_node_at(*cb, old_node4_offset)->child[s->parent_to_curr_dir];
     e_node_offset    = cb_bst_node_at(*cb, old_node4_offset)->child[!s->parent_to_curr_dir];
 
-    /* Allocate rewritten nodes, traversal-contiguous. */
-    /* OPTIM do this by selecting modifiable w/o copy? */
-    ret = cb_bst_node_alloc(cb, &new_node3_offset);
+    /* Obtain suitable nodes for rewrite, traversal-contiguous. */
+    new_node3_offset = old_node3_offset;
+    ret = cb_bst_select_modifiable_node_raw(cb,
+                                            s->cutoff_offset,
+                                            &new_node3_offset);
     if (ret != 0)
         return ret;
-    ret = cb_bst_node_alloc(cb, &new_node4_offset);
+    new_node4_offset = old_node4_offset;
+    ret = cb_bst_select_modifiable_node_raw(cb,
+                                            s->cutoff_offset,
+                                            &new_node4_offset);
     if (ret != 0)
         return ret;
 
+    /* Perform the delete case 4. */
     node1     = cb_bst_node_at(*cb, node1_offset);
     node2     = cb_bst_node_at(*cb, node2_offset);
     old_node3 = cb_bst_node_at(*cb, old_node3_offset);
@@ -1739,13 +1786,15 @@ cb_bst_delete_case5(struct cb                  **cb,
     node3_offset     = s->parent_node_offset;
     old_node5_offset = s->sibling_node_offset;
 
-    /* Allocate rewritten node. */
-    /* OPTIM do this by selecting modifiable w/o copy? */
-    ret = cb_bst_node_alloc(cb, &new_node5_offset);
+    /* Obtain suitable nodes for rewrite, traversal-contiguous. */
+    new_node5_offset = old_node5_offset;
+    ret = cb_bst_select_modifiable_node_raw(cb,
+                                            s->cutoff_offset,
+                                            &new_node5_offset);
     if (ret != 0)
         return ret;
 
-    /* Perform the delete case 4. */
+    /* Perform the delete case 5. */
     node1     = cb_bst_node_at(*cb, node1_offset);
     node3     = cb_bst_node_at(*cb, node3_offset);
     old_node5 = cb_bst_node_at(*cb, old_node5_offset);
