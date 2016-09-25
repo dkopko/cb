@@ -109,7 +109,14 @@ struct cb
 };
 
 
-CB_INLINE int cb_offset_cmp(cb_offset_t lhs, cb_offset_t rhs)
+/*
+ * Compares two offsets.  As offsets are cyclic, we say that 'rhs' is
+ * "less-than" 'lhs' if it within one-half of the offset range below 'lhs', and
+ * "greater-than" otherwise.
+ */
+CB_INLINE int
+cb_offset_cmp(cb_offset_t lhs,
+              cb_offset_t rhs)
 {
     cb_offset_t diff = rhs - lhs;
     return diff == 0 ? 0 :
@@ -118,109 +125,299 @@ CB_INLINE int cb_offset_cmp(cb_offset_t lhs, cb_offset_t rhs)
 }
 
 
-CB_INLINE bool cb_offset_lte(cb_offset_t lhs, cb_offset_t rhs)
+/*
+ * Returns whether 'lhs' is "less-than-or-equal-to" 'rhs'.
+ */
+CB_INLINE bool
+cb_offset_lte(cb_offset_t lhs,
+              cb_offset_t rhs)
 {
     return (rhs - lhs) < (CB_OFFSET_MAX / 2);
 }
 
 
-int cb_module_init(void);
+/*
+ * Initializes the cb library/module.
+ */
+int
+cb_module_init(void);
 
-struct cb* cb_create(struct cb_params *in_params, size_t in_params_len);
-void cb_destroy(struct cb *cb);
 
-void cb_validate2(const struct cb *cb);
+/*
+ * Creates a continuous buffer based on the passed-in parameters.
+ */
+struct cb*
+cb_create(struct cb_params *in_params,
+          size_t            in_params_len);
 
-void cb_memcpy_out_short(void *dest,
-                         const struct cb *cb, cb_offset_t offset,
-                         size_t len);
-void cb_memcpy_out(void *dest,
-                   const struct cb *cb, cb_offset_t offset,
-                   size_t len);
-void cb_memcpy_in_short(struct cb *cb, cb_offset_t offset,
-                        const void *src,
-                        size_t len);
-void cb_memcpy_in(struct cb *cb, cb_offset_t offset,
-                  const void *src,
-                  size_t len);
-void cb_memcpy(struct cb *dest_cb, cb_offset_t dest_offset,
-               const struct cb *src_cb, cb_offset_t src_offset,
-               size_t len);
 
-int cb_resize(struct cb **cb, size_t requested_ring_size);
-int cb_grow(struct cb **cb, size_t min_ring_size);
-int cb_shrink(struct cb **cb, size_t min_ring_size);
-int cb_shrink_auto(struct cb **cb);
+/*
+ * Destroys a continuous buffer.
+ */
+void
+cb_destroy(struct cb *cb);
 
-int cb_append(struct cb **cb, void *p, size_t len);
+/*
+ * Validates a continuous buffer.
+ */
+void
+cb_validate2(const struct cb *cb);
 
-int cb_memalign(struct cb **cb,
-                cb_offset_t *offset,
-                size_t alignment,
-                size_t size);
 
-CB_INLINE size_t cb_ring_size(const struct cb *cb)
+/*
+ * Copies memory out of the continuous buffer 'cb' and into 'dest'.  Memory
+ * starts at the offset within cb of 'offset', and is of size 'len' bytes.
+ *
+ * This variant requires that 'len' is strictly less than the loop size.
+ */
+void
+cb_memcpy_out_short(void            *dest,
+                    const struct cb *cb,
+                    cb_offset_t      offset,
+                    size_t           len);
+
+
+/*
+ * Copies memory out of the continuous buffer 'cb' and into 'dest'.  Memory
+ * starts at the offset within cb of 'offset', and is of size 'len' bytes.
+ */
+void
+cb_memcpy_out(void            *dest,
+              const struct cb *cb,
+              cb_offset_t      offset,
+              size_t           len);
+
+
+/*
+ * Copies memory from 'src' into the continuous buffer 'cb' at offset 'offset'.
+ * Memory is of size 'len' bytes.
+ *
+ * This variant requires that 'len' is strictly less than the loop size.
+ */
+void
+cb_memcpy_in_short(struct cb   *cb,
+                   cb_offset_t  offset,
+                   const void  *src,
+                   size_t       len);
+
+
+/*
+ * Copies memory from 'src' into the continuous buffer 'cb' at offset 'offset'.
+ * Memory is of size 'len' bytes.
+ */
+void
+cb_memcpy_in(struct cb   *cb,
+             cb_offset_t  offset,
+             const void  *src,
+             size_t       len);
+
+
+/*
+ * Copies memory from continuous buffer 'src_cb' starting at offset 'src_offset'
+ * into continuous buffer 'dest_cb' at offset 'dest_offset'.  Memory is of size
+ * 'len' bytes.
+ */
+void
+cb_memcpy(struct cb       *dest_cb,
+          cb_offset_t      dest_offset,
+          const struct cb *src_cb,
+          cb_offset_t      src_offset,
+          size_t           len);
+
+
+/*
+ * Requests a resize (larger or smaller) of the continuous buffer 'cb' to the
+ * requested size 'requested_ring_size'.
+ */
+int
+cb_resize(struct cb **cb,
+          size_t      requested_ring_size);
+
+
+/*
+ * Requests a resize larger of the continuous buffer 'cb' to the requested size
+ * 'min_ring_size'.  The chosen size will be the next power of two greater than
+ * 'min_ring_size'.
+ */
+int
+cb_grow(struct cb **cb,
+        size_t      min_ring_size);
+
+
+/*
+ * Requests a resize smaller of the continuous buffer 'cb' to the requested size
+ * 'min_ring_size'.  The chosen size will be the next power of two greater than
+ * 'min_ring_size'.
+ */
+int
+cb_shrink(struct cb **cb,
+          size_t      min_ring_size);
+
+
+/*
+ * Requests a resize smaller of the continuous buffer 'cb' to the smallest size
+ * greater than its presently stored data range.
+ */
+int
+cb_shrink_auto(struct cb **cb);
+
+
+/*
+ * Appends data at 'p' of size 'len' to the continuous buffer 'cb' at its
+ * present cursor offset.  The cursor will be incremented by 'len' bytes.
+ */
+int
+cb_append(struct cb **cb,
+          void       *p,
+          size_t      len);
+
+
+/*
+ * Allocates memory from the continuous buffer 'cb', whose location offset will
+ * be returned in 'offset'.  The allocated memory will have alignment
+ * 'alignment' and be of length 'size' bytes.
+ */
+int
+cb_memalign(struct cb   **cb,
+            cb_offset_t  *offset,
+            size_t        alignment,
+            size_t        size);
+
+
+/*
+ * Returns the size of the "ring" of the continuous buffer 'cb'.  The ring is
+ * the presently exposed writeable area of the continuous buffer.  The ring has
+ * a range which is a power of two, and it represents a range of offsets within
+ * the cycle of offsets.
+ */
+CB_INLINE size_t
+cb_ring_size(const struct cb *cb)
 {
     return cb->mask + 1;
 }
 
 
-CB_INLINE size_t cb_loop_size(const struct cb *cb)
+/*
+ * Returns the loop size of the continuos buffer 'cb'.  The "loop" is a region
+ * of the "ring" which is remapped in virtual memory to appear again immediately
+ * subsequent to the end of the ring itself.  This creates a "magic ring buffer"
+ * which allows writes off of the end of the ring to seamlessly produce writes
+ * at the wrap-around beginning of the ring.  (This is handled by the
+ * memory-management unit due to the virtual memory page remappings.)  Such
+ * writes can proceed without program checking so long as their length is
+ * less-than-or-equal-to the loop size.
+ */
+CB_INLINE size_t
+cb_loop_size(const struct cb *cb)
 {
     return cb->loop_size;
 }
 
 
-CB_INLINE void* cb_ring_start(const struct cb *cb)
+/*
+ * Returns the raw pointer to the start of the ring of the continuous buffer
+ * 'cb'.
+ */
+CB_INLINE void*
+cb_ring_start(const struct cb *cb)
 {
     return (char*)cb + cb->header_size;
 }
 
 
-CB_INLINE void* cb_ring_end(const struct cb *cb)
+/*
+ * Returns the raw pointer to the end of the ring of the continuous buffer
+ * 'cb'.  The end represents an address one byte past the writable ring area of
+ * the continuous buffer, i.e. the range of the ring is [ring_start, ring_end).
+ */
+CB_INLINE void*
+cb_ring_end(const struct cb *cb)
 {
     return (char*)cb_ring_start(cb) + cb_ring_size(cb);
 }
 
 
-CB_INLINE void* cb_loop_start(const struct cb *cb)
+/*
+ * Returns the raw pointer to the start of the loop of the continuous buffer
+ * 'cb'.
+ */
+CB_INLINE void*
+cb_loop_start(const struct cb *cb)
 {
     return cb_ring_end(cb);
 }
 
 
-CB_INLINE void* cb_loop_end(const struct cb *cb)
+/*
+ * Returns the raw pointer to the end of the loop of the continous buffer
+ * 'cb'.  The end represents an address one byte past the writable loop area of
+ * the continuous buffer, i.e. the range of the loop is [loop_start, loop_end).
+ */
+CB_INLINE void*
+cb_loop_end(const struct cb *cb)
 {
     return (char*)cb_ring_end(cb) + cb_loop_size(cb);
 }
 
 
-CB_INLINE size_t cb_data_size(const struct cb *cb)
+/*
+ * Returns the size of the accumulated data held within the ring of the
+ * continous buffer 'cb'.  This is represented by the range from where the
+ * data began to be written up to the cursor.
+ */
+CB_INLINE size_t
+cb_data_size(const struct cb *cb)
 {
     return cb->cursor - cb->data_start;
 }
 
 
-CB_INLINE cb_offset_t cb_cursor(const struct cb *cb)
+/*
+ * Returns the offset of the cursor within the continous buffer 'cb'.  Note that
+ * this offset is an absolute offset within the cyclical range of offsets.  In
+ * particular, the cursor may wrap around the ring of the continous buffer
+ * several times without needing to resize the continous buffer (so long as the
+ * low end of the range of data, 'data_start', also keeps progressing).
+ */
+CB_INLINE cb_offset_t
+cb_cursor(const struct cb *cb)
 {
     return cb->cursor;
 }
 
 
-CB_INLINE void cb_rewind_to(struct cb *cb, cb_offset_t offset)
+/*
+ * Rewinds the cursor of the continous buffer 'cb' to an earlier, lower offset.
+ * This is suitable to use if an attempted action failed after allocating some
+ * memory, in order to free the memory no longer needed.
+ */
+CB_INLINE void
+cb_rewind_to(struct cb   *cb,
+             cb_offset_t  offset)
 {
     cb_assert(cb_offset_lte(offset, cb->cursor));
     cb->cursor = offset;
 }
 
 
-CB_INLINE size_t cb_free_size(const struct cb *cb)
+/*
+ * Returns the free area within the ring of the contiuous buffer 'cb'.  This is
+ * the size of the ring minus the size of the data already held within it.
+ */
+CB_INLINE size_t
+cb_free_size(const struct cb *cb)
 {
     return cb_ring_size(cb) - cb_data_size(cb);
 }
 
 
-CB_INLINE void* cb_at(const struct cb *cb, cb_offset_t offset)
+/*
+ * Returns a raw pointer to the area of memory presently holding the data of
+ * continous buffer 'cb' at offset 'offset'.
+ */
+CB_INLINE void*
+cb_at(const struct cb *cb,
+      cb_offset_t      offset)
 {
     /* offset >= data_start */
     cb_assert(cb_offset_cmp(offset, cb->data_start) > -1);
@@ -232,16 +429,37 @@ CB_INLINE void* cb_at(const struct cb *cb, cb_offset_t offset)
 }
 
 
-CB_INLINE cb_offset_t cb_from(const struct cb *cb, const void *addr)
+#if 0
+/*
+ * Attempts to translate a raw pointer to an offset within the continous buffer
+ * 'cb'.  However, there is ambiguity here, as a given raw address may
+ * represent many offsets within the continous buffer, as the offsets wrap
+ * around the ring to occupy the same raw memory locations as earlier offsets
+ * (modulo the ring size).  The use of this function in general should be
+ * avoided.
+ */
+CB_INLINE cb_offset_t
+cb_from(const struct cb *cb,
+        const void      *addr)
 {
     cb_assert((char*)addr >= (char*)cb_ring_start(cb));
     cb_assert((char*)addr <= (char*)cb_ring_end(cb));
 
     return cb->data_start + ((char*)addr - (char*)cb_ring_start(cb));
 }
+#endif
 
 
-CB_INLINE int cb_ensure_free(struct cb **cb, size_t len)
+/*
+ * Ensures that there is at least 'len' bytes available to be written to in the
+ * continous buffer 'cb', attempting to grow the continous buffer if needed.
+ *
+ * This variant does not ensure that the len bytes will be contiguous, only
+ * that they will be free for writing.
+ */
+CB_INLINE int
+cb_ensure_free(struct cb **cb,
+               size_t      len)
 {
     if (len <= cb_free_size(*cb))
         return 0;
@@ -250,7 +468,14 @@ CB_INLINE int cb_ensure_free(struct cb **cb, size_t len)
 }
 
 
-CB_INLINE int cb_ensure_to(struct cb **cb, cb_offset_t offset)
+/*
+ * Ensures that the range of offsets up to, but not including, 'offset' is
+ * available for writing in the continous buffer 'cb', attempting to grow the
+ * continous buffer if needed.
+ */
+CB_INLINE int
+cb_ensure_to(struct cb   **cb,
+             cb_offset_t   offset)
 {
     if (!cb_offset_lte((*cb)->cursor, offset))
         return -1;
