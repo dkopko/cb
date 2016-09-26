@@ -483,4 +483,62 @@ cb_ensure_to(struct cb   **cb,
     return cb_ensure_free(cb, offset - (*cb)->cursor);
 }
 
+
+/*
+ * Ensures that the continuous buffer's cursor will be left pointing at an
+ * offset which is contiguously writable for 'len' bytes, growing the continuous
+ * buffer and/or advancing the cursor as necessary.
+ */
+CB_INLINE int
+cb_ensure_free_contiguous(struct cb **cb,
+                          size_t      len)
+{
+    char *ring_start = (char*)cb_ring_start(*cb);
+    char *data_start = (char*)cb_at(*cb, (*cb)->data_start);
+    char *cursor     = (char*)cb_at(*cb, (*cb)->cursor);
+    char *ring_end   = (char*)cb_ring_start(*cb);
+
+    cb_assert(ring_start <= cursor);
+    cb_assert(ring_start <= data_start);
+    cb_assert(data_start < ring_end);
+    cb_assert(cursor < ring_end);
+
+    if (data_start < cursor)
+    {
+        /*
+         *                                       [-loop area-]
+         * [---area 1---]              [--------area 2-------]
+         * ..............DDDDDDDDDDDDDD..........LLLLLLLLLLLLL
+         * ^             ^             ^         ^
+         * ring_start    data_start    cursor    ring_end
+         */
+
+        size_t area1_len = (size_t)(data_start - ring_start);
+        size_t area2_len = (size_t)(ring_end - cursor) +
+            (area1_len < cb_loop_size(*cb) ? area1_len : cb_loop_size(*cb));
+
+        if (len < area2_len)
+            return 0;
+
+        if (len < area1_len)
+        {
+            (*cb)->cursor += (ring_end - cursor);
+            return 0;
+        }
+    }
+    else
+    {
+        /*
+         * DDDDDDDDDDDDDD..........DDDDDDDDDDDDDD
+         * ^             ^         ^             ^
+         * ring_start    cursor    data_start    ring_end
+         */
+
+        if ((size_t)(data_start - cursor) < len)
+            return 0;
+    }
+
+    return cb_grow(cb, cb_ring_size(*cb) + len);
+}
+
 #endif /* ! defined _CB_H_*/
