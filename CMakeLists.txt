@@ -10,6 +10,7 @@ set(CB_SOURCES
   "${CMAKE_SOURCE_DIR}/src/cb_interpreter.c"
   "${CMAKE_SOURCE_DIR}/src/cb_lb_set.c"
   "${CMAKE_SOURCE_DIR}/src/cb_map.c"
+  "${CMAKE_SOURCE_DIR}/src/cb_print.c"
   "${CMAKE_SOURCE_DIR}/src/cb_random.c"
   "${CMAKE_SOURCE_DIR}/src/cb_structmap.c"
 )
@@ -38,8 +39,8 @@ set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -mtune=native")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -mtune=native")
 
 # Used for coverage report.
-set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_COVERAGE} -O0 -g -DCB_ASSERT_ON -DCB_HEAVY_ASSERT_ON -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} -O0 -g -DCB_ASSERT_ON -DCB_HEAVY_ASSERT_ON -fprofile-arcs -ftest-coverage")
+set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_COVERAGE} -O0 -g -DCB_ASSERT_ON -DCB_HEAVY_ASSERT_ON -DCB_VERBOSE -fprofile-arcs -ftest-coverage")
+set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} -O0 -g -DCB_ASSERT_ON -DCB_HEAVY_ASSERT_ON -DCB_VERBOSE -fprofile-arcs -ftest-coverage")
 set(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_COVERAGE} -fprofile-arcs -ftest-coverage")
 
 
