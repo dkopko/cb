@@ -60,7 +60,6 @@ typedef uintptr_t cb_mask_t;
 typedef uintptr_t cb_offset_t;
 enum { CB_OFFSET_MAX = UINTPTR_MAX };
 
-
 struct cb_key
 {
     uint64_t k;
@@ -490,14 +489,14 @@ cb_contiguous_write_range(struct cb *cb)
     char *ring_start = (char*)cb_ring_start(cb);
     char *data_start = (char*)cb_at(cb, cb->data_start);
     char *cursor     = (char*)cb_at(cb, cb->cursor);
-    char *ring_end   = (char*)cb_ring_start(cb);
+    char *ring_end   = (char*)cb_ring_end(cb);
 
     cb_assert(ring_start <= cursor);
     cb_assert(ring_start <= data_start);
     cb_assert(data_start < ring_end);
     cb_assert(cursor < ring_end);
 
-    if (data_start < cursor)
+    if (cursor >= data_start)
     {
         /*
          *                                       [-loop area-]
@@ -538,14 +537,14 @@ cb_ensure_free_contiguous(struct cb **cb,
     char *ring_start = (char*)cb_ring_start(*cb);
     char *data_start = (char*)cb_at(*cb, (*cb)->data_start);
     char *cursor     = (char*)cb_at(*cb, (*cb)->cursor);
-    char *ring_end   = (char*)cb_ring_start(*cb);
+    char *ring_end   = (char*)cb_ring_end(*cb);
 
     cb_assert(ring_start <= cursor);
     cb_assert(ring_start <= data_start);
     cb_assert(data_start < ring_end);
     cb_assert(cursor < ring_end);
 
-    if (data_start < cursor)
+    if (cursor >= data_start)
     {
         /*
          *                                       [-loop area-]
