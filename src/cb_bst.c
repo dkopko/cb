@@ -17,6 +17,8 @@
 #include "cb.h"
 #include "cb_assert.h"
 #include "cb_bst.h"
+#include "cb_print.h"
+#include "cb_term.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -138,10 +140,10 @@ Garbage Collection
 
 struct cb_bst_node
 {
-    struct cb_key    key;
-    struct cb_value  value;
-    unsigned int     color;
-    cb_offset_t      child[2];  /* 0: left, 1: right */
+    struct cb_term key;
+    struct cb_term value;
+    unsigned int   color;
+    cb_offset_t    child[2];  /* 0: left, 1: right */
 };
 
 
@@ -198,11 +200,12 @@ enum
 
 struct cb_bst_sequence_check_state
 {
-    bool          has_prev;
-    unsigned int  i;
-    struct cb_key prev;
-    bool          failed;
-    bool          do_print;
+    struct cb      **cb;
+    bool             has_prev_key;
+    unsigned int     i;
+    struct cb_term   prev_key;
+    bool             failed;
+    bool             do_print;
 };
 
 
@@ -246,72 +249,55 @@ cb_bst_node_is_black(const struct cb *cb,
 
 
 static int
-cb_key_cmp(const struct cb_key *lhs, const struct cb_key *rhs)
-{
-    if (lhs->k < rhs->k) return -1;
-    if (lhs->k > rhs->k) return 1;
-    return 0;
-}
-
-
-static void
-cb_key_assign(struct cb_key *lhs, const struct cb_key *rhs)
-{
-    lhs->k = rhs->k;
-}
-
-
-static void
-cb_value_assign(struct cb_value *lhs, const struct cb_value *rhs)
-{
-    lhs->v = rhs->v;
-}
-
-
-static int
-cb_bst_sequence_check(const struct cb_key   *k,
-               const struct cb_value *v,
-               void                  *closure)
+cb_bst_sequence_check(const struct cb_term *key,
+                      const struct cb_term *value,
+                      void                 *closure)
 {
     struct cb_bst_sequence_check_state *scs =
         (struct cb_bst_sequence_check_state *)closure;
 
-    (void)v;
+    (void)value;
 
     if (scs->do_print)
-        cb_log_debug("bst[%u] = %ju.", scs->i, (uintmax_t)k->k);
+        cb_log_debug("bst[%u] = %s.", scs->i, cb_term_to_str(scs->cb, key));
 
-    if (scs->has_prev && cb_key_cmp(&(scs->prev), k) != -1)
+    if (scs->has_prev_key &&
+        cb_term_cmp(*(scs->cb), &(scs->prev_key), key) != -1)
     {
         if (scs->do_print)
-            cb_log_debug("Order violation: %ju !< %ju",
-                         (uintmax_t)scs->prev.k, (uintmax_t)k->k);
+        {
+            cb_log_debug("Order violation: %s !< %s",
+                         cb_term_to_str(scs->cb, &(scs->prev_key)),
+                         cb_term_to_str(scs->cb, key));
+        }
+
         scs->failed = true;
     }
 
-    scs->has_prev = true;
+    scs->has_prev_key = true;
     (scs->i)++;
-    cb_key_assign(&(scs->prev), k);
+    cb_term_assign(&(scs->prev_key), key);
     return 0;
 }
 
 
 static bool
-cb_bst_validate_sequence(const struct cb *cb,
-                         cb_offset_t      node_offset,
-                         bool             do_print)
+cb_bst_validate_sequence(struct cb   **cb,
+                         cb_offset_t   node_offset,
+                         bool          do_print)
 {
     struct cb_bst_sequence_check_state scs = {
-        .has_prev = false,
-        .i        = 0,
-        .failed   = false,
-        .do_print = do_print
+        .cb           = cb,
+        .has_prev_key = false,
+        .i            = 0,
+        .failed       = false,
+        .do_print     = do_print
     };
     int ret;
 
     (void)ret;
 
-    ret = cb_bst_traverse(cb, node_offset, cb_bst_sequence_check, &scs);
+    ret = cb_bst_traverse(*cb, node_offset, cb_bst_sequence_check, &scs);
     cb_assert(ret == 0);
 
     return scs.failed ? false : true;
@@ -319,12 +305,12 @@ cb_bst_validate_sequence(const struct cb *cb,
 
 
 static bool
-cb_bst_validate_structure(const struct cb                  *cb,
-                          cb_offset_t                       node_offset,
-                          uint32_t                         *tree_height,
-                          uint32_t                          validate_depth,
-                          bool                              do_print,
-                          const struct cb_bst_mutate_state *s)
+cb_bst_validate_structure(struct cb                        **cb,
+                          cb_offset_t                        node_offset,
+                          uint32_t                          *tree_height,
+                          uint32_t                           validate_depth,
+                          bool                               do_print,
+                          const struct cb_bst_mutate_state  *s)
 {
     struct cb_bst_node *node, *left_node, *right_node;
     uint32_t left_height = 0, right_height = 0;
@@ -344,14 +330,14 @@ cb_bst_validate_structure(const struct cb                  *cb,
         return true;
     }
 
-    node = cb_bst_node_at(cb, node_offset);
+    node = cb_bst_node_at(*cb, node_offset);
     if (do_print)
-        printf("%.*s%snode_offset %ju: {k: %ju, v: %ju, color: %s, left: %ju, right: %ju}%s%s%s%s%s\n",
+        printf("%.*s%snode_offset %ju: {k: %s, v: %s, color: %s, left: %ju, right: %ju}%s%s%s%s%s\n",
                (int)validate_depth, spaces,
                node->color == CB_BST_RED ? "\033[1;31;40m" : "",
                node_offset,
-               (uintmax_t)node->key.k,
-               (uintmax_t)node->value.v,
+               cb_term_to_str(cb, &(node->key)),
+               cb_term_to_str(cb, &(node->value)),
                node->color == CB_BST_RED ? "RED" : "BLACK",
                (uintmax_t)node->child[0],
                (uintmax_t)node->child[1],
@@ -361,32 +347,34 @@ cb_bst_validate_structure(const struct cb                  *cb,
                (s && node_offset == s->parent_node_offset ? " PARENT" : ""),
                (s && node_offset == s->curr_node_offset ? " CURRENT" : ""));
 
-    left_node = cb_bst_node_at(cb, node->child[0]);
+    left_node = cb_bst_node_at(*cb, node->child[0]);
     if (left_node)
     {
-        if (cb_key_cmp(&(left_node->key), &(node->key)) != -1)
+        if (cb_term_cmp(*cb, &(left_node->key), &(node->key)) != -1)
         {
             if (do_print)
-                printf("%*.s\033[1;33;40mnode_offset %ju: left key %ju (off: %ju) !< key %ju\033[0m\n",
+                printf("%*.s\033[1;33;40mnode_offset %ju: left key %s (off: %ju) !< key %s\033[0m\n",
                        (int)validate_depth, spaces,
                        node_offset,
-                       left_node->key.k, node->child[0],
-                       node->key.k);
+                       cb_term_to_str(cb, &(left_node->key)),
+                       node->child[0],
+                       cb_term_to_str(cb, &(node->key)));
             retval = false;
         }
     }
 
-    right_node = cb_bst_node_at(cb, node->child[1]);
+    right_node = cb_bst_node_at(*cb, node->child[1]);
     if (right_node)
     {
-        if (cb_key_cmp(&(node->key), &(right_node->key)) != -1)
+        if (cb_term_cmp(*cb, &(node->key), &(right_node->key)) != -1)
         {
             if (do_print)
-                printf("%*.s\033[1;33;40mnode_offset %ju: key %ju !< right key %ju (off:%ju)\033[0m\n",
+                printf("%*.s\033[1;33;40mnode_offset %ju: key %s !< right key %s (off:%ju)\033[0m\n",
                        (int)validate_depth, spaces,
                        node_offset,
-                       node->key.k,
-                       right_node->key.k, node->child[1]);
+                       cb_term_to_str(cb, &(node->key)),
+                       cb_term_to_str(cb, &(right_node->key)),
+                       node->child[1]);
             retval = false;
         }
     }
@@ -424,7 +412,7 @@ cb_bst_validate_structure(const struct cb                  *cb,
 
     if (node->color == CB_BST_RED)
     {
-        if (cb_bst_node_is_red(cb, node->child[0]))
+        if (cb_bst_node_is_red(*cb, node->child[0]))
         {
             if (do_print)
                 printf("%*.s\033[1;33;40mnode_offset %ju (red) has red left child %ju\033[0m\n",
@@ -433,7 +421,7 @@ cb_bst_validate_structure(const struct cb                  *cb,
             retval = false;
         }
 
-        if (cb_bst_node_is_red(cb, node->child[1]))
+        if (cb_bst_node_is_red(*cb, node->child[1]))
         {
             if (do_print)
                 printf("%*.s\033[1;33;40mnode_offset %ju (red) has red right child %ju\033[0m\n",
@@ -450,7 +438,7 @@ cb_bst_validate_structure(const struct cb                  *cb,
 
 
 static bool
-cb_bst_validate(const struct cb                  *cb,
+cb_bst_validate(struct cb                       **cb,
                 cb_offset_t                       node_offset,
                 const char                       *name,
                 const struct cb_bst_mutate_state *s)
@@ -596,10 +584,10 @@ cb_bst_node_alloc(struct cb   **cb,
  *     which a node containing key may be inserted.
  */
 static int
-cb_bst_find_path(struct cb_bst_iter  *iter,
-                 const struct cb     *cb,
-                 cb_offset_t          root_node_offset,
-                 const struct cb_key *key)
+cb_bst_find_path(struct cb_bst_iter   *iter,
+                 const struct cb      *cb,
+                 cb_offset_t           root_node_offset,
+                 const struct cb_term *key)
 {
     cb_offset_t         curr_offset;
     struct cb_bst_node *curr_node;
@@ -612,7 +600,7 @@ cb_bst_find_path(struct cb_bst_iter  *iter,
     while ((curr_node = cb_bst_node_at(cb, curr_offset)) != NULL)
     {
 
-        cmp = cb_key_cmp(key, &(curr_node->key));
+        cmp = cb_term_cmp(cb, key, &(curr_node->key));
 
         iter->finger[iter->depth].offset = curr_offset;
         iter->finger[iter->depth].node   = curr_node;
@@ -631,9 +619,9 @@ cb_bst_find_path(struct cb_bst_iter  *iter,
 
 
 bool
-cb_bst_contains_key(const struct cb     *cb,
-                    cb_offset_t          root_node_offset,
-                    const struct cb_key *key)
+cb_bst_contains_key(const struct cb      *cb,
+                    cb_offset_t           root_node_offset,
+                    const struct cb_term *key)
 {
     struct cb_bst_iter iter;
     int ret;
@@ -647,15 +635,23 @@ cb_bst_contains_key(const struct cb     *cb,
 
 
 int
-cb_bst_lookup(const struct cb     *cb,
-              cb_offset_t          root_node_offset,
-              const struct cb_key *key,
-              struct cb_value     *value)
+cb_bst_lookup(const struct cb      *cb,
+              cb_offset_t           root_node_offset,
+              const struct cb_term *key,
+              struct cb_term       *value)
 {
     struct cb_bst_iter iter;
     int ret;
 
-    cb_heavy_assert(cb_bst_validate(cb, root_node_offset, "pre-lookup", NULL));
+    /*
+     * NOTE: cb would only need mutation on structural failures (for printing of
+     * the errors), so we don't pollute the signature of cb_bst_lookup() here,
+     * but rather hack it with a cast.
+     */
+    cb_heavy_assert(cb_bst_validate((struct cb **)&cb,
+                                    root_node_offset,
+                                    "pre-lookup",
+                                    NULL));
 
     ret = cb_bst_find_path(&iter,
                            cb,
@@ -664,10 +660,11 @@ cb_bst_lookup(const struct cb     *cb,
     if (ret != 0)
         goto fail;
 
-    cb_value_assign(value, &(iter.finger[iter.depth].node->value));
+    cb_term_assign(value, &(iter.finger[iter.depth].node->value));
 
 fail:
-    cb_heavy_assert(cb_bst_validate(cb,
+    /* See NOTE above. */
+    cb_heavy_assert(cb_bst_validate((struct cb **)&cb,
                                     root_node_offset,
                                     (ret == 0 ? "post-lookup-success" :
                                                 "post-lookup-fail"),
@@ -789,8 +786,8 @@ traverse_left:
 
 
 void
-cb_bst_print(const struct cb *cb,
-             cb_offset_t      node_offset)
+cb_bst_print(struct cb   **cb,
+             cb_offset_t   node_offset)
 {
     uint32_t tree_height;
 
@@ -866,16 +863,16 @@ cb_bst_red_pair_fixup_single(struct cb                  **cb,
     /* Perform the fixup-single. */
     old_node2 = cb_bst_node_at(*cb, old_node2_offset);
     new_node2 = cb_bst_node_at(*cb, new_node2_offset);
-    cb_key_assign(&(new_node2->key), &(old_node2->key));
-    cb_value_assign(&(new_node2->value), &(old_node2->value));
+    cb_term_assign(&(new_node2->key), &(old_node2->key));
+    cb_term_assign(&(new_node2->value), &(old_node2->value));
     new_node2->color = CB_BST_BLACK;
     new_node2->child[s->parent_to_curr_dir] = node1_offset;
     new_node2->child[!s->parent_to_curr_dir] = new_node3_offset;
 
     old_node3 = cb_bst_node_at(*cb, old_node3_offset);
     new_node3 = cb_bst_node_at(*cb, new_node3_offset);
-    cb_key_assign(&(new_node3->key), &(old_node3->key));
-    cb_value_assign(&(new_node3->value), &(old_node3->value));
+    cb_term_assign(&(new_node3->key), &(old_node3->key));
+    cb_term_assign(&(new_node3->value), &(old_node3->value));
     new_node3->color = CB_BST_RED;
     new_node3->child[s->parent_to_curr_dir] = c_node_offset;
     new_node3->child[!s->parent_to_curr_dir] = d_node_offset;
@@ -977,24 +974,24 @@ cb_bst_red_pair_fixup_double(struct cb                  **cb,
     /* Perform the fixup-double. */
     old_node1 = cb_bst_node_at(*cb, old_node1_offset);
     new_node1 = cb_bst_node_at(*cb, new_node1_offset);
-    cb_key_assign(&(new_node1->key), &(old_node1->key));
-    cb_value_assign(&(new_node1->value), &(old_node1->value));
+    cb_term_assign(&(new_node1->key), &(old_node1->key));
+    cb_term_assign(&(new_node1->value), &(old_node1->value));
     new_node1->color = CB_BST_RED;
     new_node1->child[!s->parent_to_curr_dir] = a_node_offset;
     new_node1->child[s->parent_to_curr_dir] = b_node_offset;
 
     old_node2 = cb_bst_node_at(*cb, old_node2_offset);
     new_node2 = cb_bst_node_at(*cb, new_node2_offset);
-    cb_key_assign(&(new_node2->key), &(old_node2->key));
-    cb_value_assign(&(new_node2->value), &(old_node2->value));
+    cb_term_assign(&(new_node2->key), &(old_node2->key));
+    cb_term_assign(&(new_node2->value), &(old_node2->value));
     new_node2->color = CB_BST_BLACK;
     new_node2->child[s->grandparent_to_parent_dir] = new_node1_offset;
     new_node2->child[!s->grandparent_to_parent_dir] = new_node3_offset;
 
     old_node3 = cb_bst_node_at(*cb, old_node3_offset);
     new_node3 = cb_bst_node_at(*cb, new_node3_offset);
-    cb_key_assign(&(new_node3->key), &(old_node3->key));
-    cb_value_assign(&(new_node3->value), &(old_node3->value));
+    cb_term_assign(&(new_node3->key), &(old_node3->key));
+    cb_term_assign(&(new_node3->value), &(old_node3->value));
     new_node3->color = CB_BST_RED;
     new_node3->child[s->grandparent_to_parent_dir] = c_node_offset;
     new_node3->child[!s->grandparent_to_parent_dir] = d_node_offset;
@@ -1041,11 +1038,11 @@ cb_bst_red_pair_fixup_double(struct cb                  **cb,
 
 /* NOTE: Insertion uses a top-down method. */
 int
-cb_bst_insert(struct cb             **cb,
-              cb_offset_t            *root_node_offset,
-              cb_offset_t             cutoff_offset,
-              const struct cb_key    *key,
-              const struct cb_value  *value)
+cb_bst_insert(struct cb            **cb,
+              cb_offset_t           *root_node_offset,
+              cb_offset_t            cutoff_offset,
+              const struct cb_term  *key,
+              const struct cb_term  *value)
 {
     struct cb_bst_mutate_state s = CB_BST_MUTATE_STATE_INIT;
     cb_offset_t         initial_cursor_offset = cb_cursor(*cb),
@@ -1059,14 +1056,16 @@ cb_bst_insert(struct cb             **cb,
     int                 cmp;
     int ret;
 
-    cb_log_debug("insert of key %ju, value %ju", key->k, value->v);
+    cb_log_debug("insert of key %s, value %s",
+                 cb_term_to_str(cb, key),
+                 cb_term_to_str(cb, value));
 
     s.new_root_node_offset = *root_node_offset;
     s.curr_node_offset = s.new_root_node_offset;
     s.cutoff_offset    = cutoff_offset;
 
     cb_assert(cb_bst_mutate_state_validate(*cb, &s));
-    cb_heavy_assert(cb_bst_validate(*cb, *root_node_offset, "pre-insert", &s));
+    cb_heavy_assert(cb_bst_validate(cb, *root_node_offset, "pre-insert", &s));
 
     if (s.curr_node_offset == CB_BST_SENTINEL)
     {
@@ -1079,12 +1078,12 @@ cb_bst_insert(struct cb             **cb,
         curr_node->color    = CB_BST_BLACK;
         curr_node->child[0] = CB_BST_SENTINEL;
         curr_node->child[1] = CB_BST_SENTINEL;
-        cb_key_assign(&(curr_node->key), key);
-        cb_value_assign(&(curr_node->value), value);
+        cb_term_assign(&(curr_node->key), key);
+        cb_term_assign(&(curr_node->value), value);
 
         *root_node_offset = s.curr_node_offset;
 
-        cb_heavy_assert(cb_bst_validate(*cb,
+        cb_heavy_assert(cb_bst_validate(cb,
                                         *root_node_offset,
                                         "post-insert-success0",
                                         &s));
@@ -1116,12 +1115,12 @@ cb_bst_insert(struct cb             **cb,
 entry:
         cb_assert(cb_bst_node_is_modifiable(s.curr_node_offset, cutoff_offset));
         curr_node = cb_bst_node_at(*cb, s.curr_node_offset);
-        cmp = cb_key_cmp(key, &(curr_node->key));
+        cmp = cb_term_cmp(*cb, key, &(curr_node->key));
         if (cmp == 0)
         {
             /* The key already exists in this tree.  Update the value at key
                and go no further. */
-            cb_value_assign(&(curr_node->value), value);
+            cb_term_assign(&(curr_node->value), value);
             goto done;
         }
         s.dir = (cmp == 1);
@@ -1209,8 +1208,8 @@ entry:
     curr_node->color    = CB_BST_RED;
     curr_node->child[0] = CB_BST_SENTINEL;
     curr_node->child[1] = CB_BST_SENTINEL;
-    cb_key_assign(&(curr_node->key), key);
-    cb_value_assign(&(curr_node->value), value);
+    cb_term_assign(&(curr_node->key), key);
+    cb_term_assign(&(curr_node->value), value);
 
     if (cb_bst_node_is_red(*cb, s.parent_node_offset))
     {
@@ -1229,7 +1228,7 @@ done:
 
     *root_node_offset = s.new_root_node_offset;
 
-    cb_heavy_assert(cb_bst_validate(*cb,
+    cb_heavy_assert(cb_bst_validate(cb,
                                     *root_node_offset,
                                     "post-insert-success",
                                     &s));
@@ -1237,7 +1236,7 @@ done:
 
 fail:
     cb_rewind_to(*cb, initial_cursor_offset);
-    cb_heavy_assert(cb_bst_validate(*cb,
+    cb_heavy_assert(cb_bst_validate(cb,
                                     *root_node_offset,
                                     "post-insert-fail",
                                     &s));
@@ -1307,8 +1306,8 @@ cb_bst_delete_fix_root(struct cb                  **cb,
     cb_assert(node2->child[s->dir] == node1_offset);
     node2->child[!s->dir] = c_node_offset;
 
-    cb_key_assign(&(new_node3->key), &(old_node3->key));
-    cb_value_assign(&(new_node3->value), &(old_node3->value));
+    cb_term_assign(&(new_node3->key), &(old_node3->key));
+    cb_term_assign(&(new_node3->value), &(old_node3->value));
     new_node3->color = CB_BST_RED;
     new_node3->child[s->dir] = node2_offset;
     new_node3->child[!s->dir] = d_node_offset;
@@ -1419,8 +1418,8 @@ cb_bst_delete_case1(struct cb                  **cb,
     new_node3->color = CB_BST_BLACK;
     new_node3->child[s->dir] = node2_offset;
     new_node3->child[!s->dir] = d_node_offset;
-    cb_key_assign(&(new_node3->key), &(old_node3->key));
-    cb_value_assign(&(new_node3->value), &(old_node3->value));
+    cb_term_assign(&(new_node3->key), &(old_node3->key));
+    cb_term_assign(&(new_node3->value), &(old_node3->value));
 
     node4->color = CB_BST_RED;
     node4->child[s->parent_to_curr_dir] = new_node3_offset;
@@ -1550,14 +1549,14 @@ cb_bst_delete_case2(struct cb                  **cb,
     node2->color = CB_BST_BLACK;
     node2->child[!s->parent_to_curr_dir] = c_node_offset;
 
-    cb_key_assign(&(new_node3->key), &(old_node3->key));
-    cb_value_assign(&(new_node3->value), &(old_node3->value));
+    cb_term_assign(&(new_node3->key), &(old_node3->key));
+    cb_term_assign(&(new_node3->value), &(old_node3->value));
     new_node3->color = CB_BST_RED;
     new_node3->child[s->parent_to_curr_dir] = node2_offset;
     new_node3->child[!s->parent_to_curr_dir] = new_node4_offset;
 
-    cb_key_assign(&(new_node4->key), &(old_node4->key));
-    cb_value_assign(&(new_node4->value), &(old_node4->value));
+    cb_term_assign(&(new_node4->key), &(old_node4->key));
+    cb_term_assign(&(new_node4->value), &(old_node4->value));
     new_node4->color = CB_BST_BLACK;
     new_node4->child[s->parent_to_curr_dir] = d_node_offset;
     new_node4->child[!s->parent_to_curr_dir] = e_node_offset;
@@ -1690,14 +1689,14 @@ cb_bst_delete_case4(struct cb                  **cb,
     node2->color = CB_BST_BLACK;
     node2->child[!s->parent_to_curr_dir] = c_node_offset;
 
-    cb_key_assign(&(new_node3->key), &(old_node3->key));
-    cb_value_assign(&(new_node3->value), &(old_node3->value));
+    cb_term_assign(&(new_node3->key), &(old_node3->key));
+    cb_term_assign(&(new_node3->value), &(old_node3->value));
     new_node3->color = CB_BST_RED;
     new_node3->child[s->parent_to_curr_dir] = node2_offset;
     new_node3->child[!s->parent_to_curr_dir] = new_node4_offset;
 
-    cb_key_assign(&(new_node4->key), &(old_node4->key));
-    cb_value_assign(&(new_node4->value), &(old_node4->value));
+    cb_term_assign(&(new_node4->key), &(old_node4->key));
+    cb_term_assign(&(new_node4->value), &(old_node4->value));
     new_node4->color = CB_BST_BLACK;
     new_node4->child[s->parent_to_curr_dir] = d_node_offset;
     new_node4->child[!s->parent_to_curr_dir] = e_node_offset;
@@ -1805,8 +1804,8 @@ cb_bst_delete_case5(struct cb                  **cb,
     node3->color = CB_BST_BLACK;
     node3->child[!s->parent_to_curr_dir] = new_node5_offset;
 
-    cb_key_assign(&(new_node5->key), &(old_node5->key));
-    cb_value_assign(&(new_node5->value), &(old_node5->value));
+    cb_term_assign(&(new_node5->key), &(old_node5->key));
+    cb_term_assign(&(new_node5->value), &(old_node5->value));
     new_node5->color = CB_BST_RED;
     new_node5->child[0] = old_node5->child[0];
     new_node5->child[1] = old_node5->child[1];
@@ -1833,10 +1832,10 @@ cb_bst_delete_case5(struct cb                  **cb,
 
 
 int
-cb_bst_delete(struct cb             **cb,
-              cb_offset_t            *root_node_offset,
-              cb_offset_t             cutoff_offset,
-              const struct cb_key    *key)
+cb_bst_delete(struct cb            **cb,
+              cb_offset_t           *root_node_offset,
+              cb_offset_t            cutoff_offset,
+              const struct cb_term  *key)
 {
     struct cb_bst_mutate_state s = CB_BST_MUTATE_STATE_INIT;
     cb_offset_t         initial_cursor_offset = cb_cursor(*cb),
@@ -1851,7 +1850,7 @@ cb_bst_delete(struct cb             **cb,
     s.cutoff_offset    = cutoff_offset;
 
     cb_assert(cb_bst_mutate_state_validate(*cb, &s));
-    cb_heavy_assert(cb_bst_validate(*cb, *root_node_offset, "pre-delete", &s));
+    cb_heavy_assert(cb_bst_validate(cb, *root_node_offset, "pre-delete", &s));
 
     /* For empty trees, there is nothing to do. */
     if (s.curr_node_offset == CB_BST_SENTINEL)
@@ -1869,7 +1868,7 @@ cb_bst_delete(struct cb             **cb,
     curr_node = cb_bst_node_at(*cb, s.curr_node_offset);
     curr_node->color = CB_BST_RED;
     s.new_root_node_offset = s.curr_node_offset;
-    cmp = cb_key_cmp(key, &(curr_node->key));
+    cmp = cb_term_cmp(*cb, key, &(curr_node->key));
     if (cmp == 0)
     {
         /* The key-to-delete exists in this tree.  Make note of this offset
@@ -1910,7 +1909,7 @@ cb_bst_delete(struct cb             **cb,
 
         cb_assert(cb_bst_node_is_modifiable(s.curr_node_offset, cutoff_offset));
         curr_node = cb_bst_node_at(*cb, s.curr_node_offset);
-        cmp = cb_key_cmp(key, &(curr_node->key));
+        cmp = cb_term_cmp(*cb, key, &(curr_node->key));
         if (cmp == 0)
         {
             /* The key-to-delete exists in this tree.  Make note of this offset
@@ -1989,7 +1988,6 @@ entry:
 
         /* The following arrangement can never happen. */
         cb_assert(!(cb_bst_node_is_black(*cb, s.curr_node_offset) &&
-                    cb_bst_node_is_red(*cb, s.parent_node_offset) &&
                     cb_bst_node_is_red(*cb, s.parent_node_offset)));
 
 descend:
@@ -2036,8 +2034,8 @@ descend:
 
         found_node     = cb_bst_node_at(*cb, found_node_offset);
         to_delete_node = cb_bst_node_at(*cb, s.parent_node_offset);
-        cb_key_assign(&(found_node->key), &(to_delete_node->key));
-        cb_value_assign(&(found_node->value), &(to_delete_node->value));
+        cb_term_assign(&(found_node->key), &(to_delete_node->key));
+        cb_term_assign(&(found_node->value), &(to_delete_node->value));
     }
 
     if (s.grandparent_node_offset != CB_BST_SENTINEL)
@@ -2068,7 +2066,7 @@ descend:
 
     *root_node_offset = s.new_root_node_offset;
 
-    cb_heavy_assert(cb_bst_validate(*cb,
+    cb_heavy_assert(cb_bst_validate(cb,
                                     *root_node_offset,
                                     "post-delete-success",
                                     &s));
@@ -2077,7 +2075,7 @@ descend:
 fail:
     cb_rewind_to(*cb, initial_cursor_offset);
     cb_assert(ret != 0); /* ret == 0 implies an implementation error. */
-    cb_heavy_assert(cb_bst_validate(*cb,
+    cb_heavy_assert(cb_bst_validate(cb,
                                     *root_node_offset,
                                     "post-delete-fail",
                                     &s));
@@ -2085,51 +2083,117 @@ fail:
 }
 
 
-static char*
-cb_key_to_str(struct cb_key *key)
+int
+cb_bst_cmp(const struct cb *cb,
+           cb_offset_t      lhs,
+           cb_offset_t      rhs)
 {
-    char *str;
-    int ret;
+    /*FIXME make this value-based by traversal of keys and values.  Right now
+     * it is identity-based. */
 
-    ret = asprintf(&str, "%" PRIu64, key->k);
-    return (ret == -1 ? NULL : str);
+    (void)cb;
+    return cb_offset_cmp(lhs, rhs);
 }
 
 
-static char*
-cb_value_to_str(struct cb_value *value)
+int
+cb_bst_render(cb_offset_t   *dest_offset,
+              struct cb    **cb,
+              cb_offset_t    node_offset,
+              unsigned int   flags)
 {
-    char *str;
-    int ret;
-
-    ret = asprintf(&str, "%" PRIu64, value->v);
-    return (ret == -1 ? NULL : str);
-}
-
-
-static char*
-cb_bst_to_str(const struct cb *cb, cb_offset_t node_offset)
-{
+    /*
+     * FIXME this is a very crap implementation which probably has O(n^2) or
+     * worse performance due to it rendering the child substrings before
+     * rendering the enclosing parent using them. Recursive would be better,
+     * and stack-based recursion best here.
+     */
+    cb_offset_t         orig_cursor_pos = cb_cursor(*cb);
     struct cb_bst_node *node;
-    char *str, *keystr, *valstr, *leftstr, *rightstr;
+    cb_offset_t         str_offset,
+                        keystr_offset,
+                        valstr_offset,
+                        leftstr_offset,
+                        rightstr_offset;
+    const char         *str,
+                       *keystr   = "(render error)",
+                       *valstr   = "(render error)",
+                       *leftstr  = "(render error)",
+                       *rightstr = "(render error)";
+    char               *final_dest;
+    size_t              str_size; /* Including null terminator. */
     int ret;
 
-    node = cb_bst_node_at(cb, node_offset);
+    node = cb_bst_node_at(*cb, node_offset);
     if (!node)
-        return strdup("NIL");
+        return cb_asprintf(dest_offset, cb, "NIL");
 
-    keystr   = cb_key_to_str(&(node->key));
-    valstr   = cb_value_to_str(&(node->value));
-    leftstr  = cb_bst_to_str(cb, node->child[0]);
-    rightstr = cb_bst_to_str(cb, node->child[1]);
+    ret = cb_term_render(&keystr_offset, cb, &(node->key), flags);
+    if (ret == 0)
+        keystr = (const char*)cb_at(*cb, keystr_offset);
 
-    ret = asprintf(&str, "(%s %s=%s %s)", leftstr, keystr, valstr, rightstr);
+    ret = cb_term_render(&valstr_offset, cb, &(node->value), flags);
+    if (ret == 0)
+        valstr = (const char*)cb_at(*cb, valstr_offset);
 
-    free(keystr);
-    free(valstr);
-    free(leftstr);
-    free(rightstr);
+    ret = cb_bst_render(&leftstr_offset, cb, node->child[0], flags);
+    if (ret == 0)
+        leftstr = (const char*)cb_at(*cb, leftstr_offset);
 
-    return (ret == -1 ? NULL : str);
+    ret = cb_bst_render(&rightstr_offset, cb, node->child[1], flags);
+    if (ret == 0)
+        rightstr = (const char*)cb_at(*cb, rightstr_offset);
+
+    ret = cb_asprintf(&str_offset, cb, "(%s %s=%s %s)",
+                      leftstr,
+                      keystr,
+                      valstr,
+                      rightstr);
+    if (ret != 0)
+        goto fail;
+
+    /*
+     * Now we have a rendered string for this BST node, existing subsequent in
+     * the continuous buffer to its rendered children.  These children
+     * renderings are now useless data.  We shift the parent rendered string
+     * over this earlier garbage to not be too wasteful with memory.  If the
+     * rewind + ensure_free_contiguous would cause a grow of the continous
+     * buffer the originally written string will not be copied to this new
+     * continuous buffer (because it no longer existing as part of the active
+     * data due to the rewind).  However, we will have cached the string where
+     * it still exists in the smaller, earlier version of the continuous buffer
+     * (this owning continuous buffer of which will get lazily removed at some
+     * safe point in the future).
+     */
+
+    str      = (const char *)cb_at(*cb, str_offset);
+    str_size = strlen(str) + 1;
+
+    cb_rewind_to(*cb, orig_cursor_pos);
+    ret = cb_ensure_free_contiguous(cb, str_size);
+    if (ret != 0)
+        goto fail;
+
+    final_dest = (char*)cb_at(*cb, cb_cursor(*cb));
+    memmove(final_dest, str, str_size);
+    return 0;
+
+fail:
+    cb_rewind_to(*cb, orig_cursor_pos);
+    return -1;
+}
+
+
+const char*
+cb_bst_to_str(struct cb **cb, cb_offset_t node_offset)
+{
+    cb_offset_t dest_offset;
+    int ret;
+
+    ret = cb_bst_render(&dest_offset, cb, node_offset, CB_RENDER_DEFAULT);
+    if (ret != 0)
+        return "(render-error)";
+
+    return (const char*)cb_at(*cb, dest_offset);
 }
 

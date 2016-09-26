@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "cb.h"
 #include "cb_map.h"
+#include "cb_term.h"
 
 
 static void
@@ -48,11 +49,11 @@ test_kv_set(struct cb **cb)
 
     for (int i = 0; i < 50; ++i)
     {
-        struct cb_key key;
-        struct cb_value value;
+        struct cb_term key;
+        struct cb_term value;
 
-        key.k = i;
-        value.v = i * 2;
+        cb_term_set_u64(&key, i);
+        cb_term_set_u64(&value,  i * 2);
 
         ret = cb_map_kv_set(&cb_map, &key, &value);
         assert(ret == 0);
@@ -60,19 +61,20 @@ test_kv_set(struct cb **cb)
 
     for (int i = 0; i < 200; i += 2)
     {
-        struct cb_key key;
-        struct cb_value value;
+        struct cb_term key;
+        struct cb_term value;
 
-        key.k = i;
-        value.v = i * 3;
+        cb_term_set_u64(&key, i);
+        cb_term_set_u64(&value, i * 3);
 
         ret = cb_map_kv_set(&cb_map, &key, &value);
         assert(ret == 0);
     }
 
-    struct cb_key key;
-    struct cb_value value;
-    key.k = 24;
+    struct cb_term key;
+    struct cb_term value;
+
+    cb_term_set_u64(&key, 24);
 
     ret = cb_map_kv_lookup(&cb_map, &key, &value);
     if (ret != 0)
@@ -81,7 +83,9 @@ test_kv_set(struct cb **cb)
         exit(EXIT_FAILURE);
     }
 
-    printf("value of key %ju is %ju\n", (uintmax_t)key.k, (uintmax_t)value.v);
+    printf("value of key %s is %s\n",
+           cb_term_to_str(cb, &key),
+           cb_term_to_str(cb, &value));
 
     ret = cb_map_kv_delete(&cb_map, &key);
     assert(ret == 0);
@@ -97,8 +101,8 @@ static void
 test_bst(struct cb **cb)
 {
     struct cb_map cb_map;
-    struct cb_key key;
-    struct cb_value value;
+    struct cb_term key;
+    struct cb_term value;
     int ret;
 
     (void)ret;
@@ -106,22 +110,22 @@ test_bst(struct cb **cb)
     ret = cb_map_init(&cb_map, cb);
     assert(ret == 0);
 
-    key.k = 1;
-    value.v = 2;
+    cb_term_set_u64(&key, 1);
+    cb_term_set_u64(&value, 2);
     ret = cb_map_kv_set(&cb_map, &key, &value);
     assert(ret == 0);
 
-    key.k = 2;
-    value.v = 5;
+    cb_term_set_u64(&key, 2);
+    cb_term_set_u64(&value, 5);
     ret = cb_map_kv_set(&cb_map, &key, &value);
     assert(ret == 0);
 
-    key.k = 3;
-    value.v = 8;
+    cb_term_set_u64(&key, 3);
+    cb_term_set_u64(&value, 8);
     ret = cb_map_kv_set(&cb_map, &key, &value);
     assert(ret == 0);
 
-    key.k = 2;
+    cb_term_set_u64(&key, 2);
     ret = cb_map_kv_delete(&cb_map, &key);
     assert(ret == 0);
 
@@ -137,15 +141,21 @@ test_bst(struct cb **cb)
 }
 
 
-static int
-doprint(const struct cb_key *k, const struct cb_value *v, void *closure)
+struct doprint_closure
 {
+    struct cb **cb;
+};
+
+
+static int
+doprint(const struct cb_term *key, const struct cb_term *value, void *closure)
+{
+    struct doprint_closure *dpc = (struct doprint_closure*)closure;
     int ret;
 
-    (void)closure;
-
-    ret = printf("doprint -- k: %ju, v: %ju\n",
-                 (uintmax_t)k->k, (uintmax_t)v->v);
+    ret = printf("doprint -- key: %s, value: %s\n",
+                 cb_term_to_str(dpc->cb, key),
+                 cb_term_to_str(dpc->cb, value));
     return (ret < 0 ? ret : 0);
 }
 
@@ -160,8 +170,8 @@ test_bst2(struct cb **cb)
     int keys2[] = { 16, 17, 18 };
 
     struct cb_map cb_map;
-    struct cb_key key;
-    struct cb_value value;
+    struct cb_term key;
+    struct cb_term value;
     int ret;
 
     (void)ret;
@@ -171,8 +181,8 @@ test_bst2(struct cb **cb)
 
     for (unsigned int i = 0; i < (sizeof(keys)/sizeof(keys[0])); ++i)
     {
-        key.k = keys[i];
-        value.v = 99;
+        cb_term_set_u64(&key, keys[i]);
+        cb_term_set_u64(&value, 99);
 
         ret = cb_map_kv_set(&cb_map, &key, &value);
         assert(ret == 0);
@@ -190,16 +200,16 @@ test_bst2(struct cb **cb)
 
     for (unsigned int i = 0; i < (sizeof(keys2)/sizeof(keys2[0])); ++i)
     {
-        key.k = keys2[i];
-        value.v = 99;
+        cb_term_set_u64(&key, keys2[i]);
+        cb_term_set_u64(&value, 99);
 
         ret = cb_map_kv_set(&cb_map, &key, &value);
         assert(ret == 0);
 
-        if (key.k == 17)
+        if (cb_term_get_u64(&key) == 17)
         {
-            struct cb_key key_to_delete;
-            key_to_delete.k = 5;
+            struct cb_term key_to_delete;
+            cb_term_set_u64(&key_to_delete, 5);
 
             ret = cb_map_kv_delete(&cb_map, &key_to_delete);
             assert(ret == 0);
@@ -216,7 +226,8 @@ test_bst2(struct cb **cb)
     cb_map_print(&cb_map);
     printf("\n");
 
-    cb_map_traverse(&cb_map, doprint, NULL);
+    struct doprint_closure pc = { .cb = cb };
+    cb_map_traverse(&cb_map, doprint, &pc);
 }
 
 

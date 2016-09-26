@@ -60,17 +60,6 @@ typedef uintptr_t cb_mask_t;
 typedef uintptr_t cb_offset_t;
 enum { CB_OFFSET_MAX = UINTPTR_MAX };
 
-struct cb_key
-{
-    uint64_t k;
-};
-
-
-struct cb_value
-{
-    uint64_t v;
-};
-
 
 struct cb_params
 {

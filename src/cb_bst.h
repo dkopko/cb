@@ -18,6 +18,8 @@
 #define _CB_BST_H_
 
 #include "cb.h"
+#include "cb_term.h"
+
 
 /* Immediate version */
 
@@ -34,32 +36,32 @@ enum
 };
 
 int
-cb_bst_insert(struct cb             **cb,
-              cb_offset_t            *root_node_offset,
-              cb_offset_t             cutoff_offset,
-              const struct cb_key    *key,
-              const struct cb_value  *value);
+cb_bst_insert(struct cb            **cb,
+              cb_offset_t           *root_node_offset,
+              cb_offset_t            cutoff_offset,
+              const struct cb_term  *key,
+              const struct cb_term  *value);
 
 int
-cb_bst_lookup(const struct cb     *cb,
-              cb_offset_t          root_node_offset,
-              const struct cb_key *key,
-              struct cb_value     *value);
+cb_bst_lookup(const struct cb      *cb,
+              cb_offset_t           root_node_offset,
+              const struct cb_term *key,
+              struct cb_term       *value);
 
 int
-cb_bst_delete(struct cb             **cb,
-              cb_offset_t            *root_node_offset,
-              cb_offset_t             cutoff_offset,
-              const struct cb_key    *key);
+cb_bst_delete(struct cb            **cb,
+              cb_offset_t           *root_node_offset,
+              cb_offset_t            cutoff_offset,
+              const struct cb_term  *key);
 
 bool
-cb_bst_contains_key(const struct cb     *cb,
-                    cb_offset_t          root_node_offset,
-                    const struct cb_key *key);
+cb_bst_contains_key(const struct cb      *cb,
+                    cb_offset_t           root_node_offset,
+                    const struct cb_term *key);
 
-typedef int (*cb_bst_traverse_func_t)(const struct cb_key   *k,
-                                      const struct cb_value *v,
-                                      void                  *closure);
+typedef int (*cb_bst_traverse_func_t)(const struct cb_term *key,
+                                      const struct cb_term *value,
+                                      void                 *closure);
 
 int
 cb_bst_traverse(const struct cb        *cb,
@@ -68,7 +70,22 @@ cb_bst_traverse(const struct cb        *cb,
                 void                   *closure);
 
 void
-cb_bst_print(const struct cb *cb,
-             cb_offset_t      node_offset);
+cb_bst_print(struct cb   **cb,
+             cb_offset_t   node_offset);
+
+int
+cb_bst_cmp(const struct cb *cb,
+           cb_offset_t      lhs,
+           cb_offset_t      rhs);
+
+int
+cb_bst_render(cb_offset_t   *dest_offset,
+              struct cb    **cb,
+              cb_offset_t    node_offset,
+              unsigned int   flags);
+
+const char*
+cb_bst_to_str(struct cb   **cb,
+              cb_offset_t   node_offset);
 
 #endif /* ! defined _CB_BST_H_*/

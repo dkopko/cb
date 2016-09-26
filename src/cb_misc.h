@@ -27,5 +27,10 @@
 
 #define cb_alignof(x) (__alignof__(x))
 
+enum cb_render_flags
+{
+    CB_RENDER_DEFAULT
+};
+
 
 #endif /* _CB_MISC_H_ */

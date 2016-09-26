@@ -72,6 +72,7 @@ function remove_mapfiles()
 function do_coverage_tests()
 {
     local test_root="${SUITE_ROOT}/coverage_tests"
+    local outfile="${test_root}/out"
     local coverage_file="${test_root}/coverage.info"
     local cleaned_coverage_file="${test_root}/coverage.info.cleaned"
     local coverage_html_root="${test_root}/coverage_html"
@@ -85,7 +86,7 @@ function do_coverage_tests()
     lcov --directory "${BUILD_ROOT}"/Coverage --zerocounters --rc lcov_branch_coverage=1
 
     # Run tests
-    "${BUILD_ROOT}"/Coverage/test_measure --event-count=1000 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    "${BUILD_ROOT}"/Coverage/test_measure --event-count=1000 --ratios=1,1,1,1,1,1 >"${outfile}" 2>&1
 
     # Produce coverage webpages.
     lcov --directory "${BUILD_ROOT}"/Coverage --capture --output-file "${coverage_file}" --rc lcov_branch_coverage=1

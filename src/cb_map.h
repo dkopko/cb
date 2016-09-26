@@ -18,6 +18,7 @@
 #define _CB_MAP_H_
 
 #include "cb.h"
+#include "cb_term.h"
 
 
 /* Lazy version */
@@ -30,20 +31,20 @@ struct cb_map
 
 int cb_map_init(struct cb_map *cb_map, struct cb **cb);
 
-int cb_map_kv_set(struct cb_map         *cb_map,
-                  const struct cb_key   *k,
-                  const struct cb_value *v);
+int cb_map_kv_set(struct cb_map        *cb_map,
+                  const struct cb_term *key,
+                  const struct cb_term *value);
 
-int cb_map_kv_lookup(const struct cb_map *cb_map,
-                     const struct cb_key *k,
-                     struct cb_value     *v);
+int cb_map_kv_lookup(const struct cb_map  *cb_map,
+                     const struct cb_term *key,
+                     struct cb_term       *value);
 
-int cb_map_kv_delete(struct cb_map       *cb_map,
-                     const struct cb_key *k);
+int cb_map_kv_delete(struct cb_map        *cb_map,
+                     const struct cb_term *key);
 
-typedef int (*cb_map_traverse_func_t)(const struct cb_key   *k,
-                                      const struct cb_value *v,
-                                      void                  *closure);
+typedef int (*cb_map_traverse_func_t)(const struct cb_term *key,
+                                      const struct cb_term *value,
+                                      void                 *closure);
 
 int cb_map_traverse(struct cb_map          *cb_map,
                     cb_map_traverse_func_t  func,

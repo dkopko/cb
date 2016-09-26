@@ -240,8 +240,8 @@ static void cbbst_handle_events(struct event *events,
                                 void         *closure)
 {
     struct cbbst_state *state = static_cast<struct cbbst_state*>(closure);
-    struct cb_key k;
-    struct cb_value v;
+    struct cb_term key;
+    struct cb_term value;
     int ret;
 
     for (unsigned int i = 0; i < events_count; ++i)
@@ -256,15 +256,14 @@ static void cbbst_handle_events(struct event *events,
             case EOP_INSERT_UNKNOWN:
             case EOP_INSERT_KNOWN:
                 cb_log_debug("=========== EVENT[%u]: EOP_INSERT (k: %ju, v:%ju)", i, (uintmax_t)e->insert.k, (uintmax_t)e->insert.v);
-
-                k.k = e->insert.k;
-                v.v = e->insert.v;
+                cb_term_set_u64(&key, e->insert.k);
+                cb_term_set_u64(&value, e->insert.v);
                 e->t0 = getticks();
                 ret = cb_bst_insert(&(state->cb),
                                     &(state->root),
                                     cb_cursor(state->cb),
-                                    &k,
-                                    &v);
+                                    &key,
+                                    &value);
                 e->t1 = getticks();
                 if (ret != 0)
                     abort();
@@ -273,12 +272,12 @@ static void cbbst_handle_events(struct event *events,
             case EOP_REMOVE_UNKNOWN:
             case EOP_REMOVE_KNOWN:
                 cb_log_debug("=========== EVENT[%u]: EOP_REMOVE (k: %ju)", i, (uintmax_t)e->remove.k);
-                k.k = e->insert.k;
+                cb_term_set_u64(&key, e->remove.k);
                 e->t0 = getticks();
                 ret = cb_bst_delete(&(state->cb),
                                     &(state->root),
                                     cb_cursor(state->cb),
-                                    &k);
+                                    &key);
                 e->t1 = getticks();
                 if (ret != 0 && e->op != EOP_REMOVE_UNKNOWN)
                     abort();
@@ -287,12 +286,12 @@ static void cbbst_handle_events(struct event *events,
             case EOP_LOOKUP_UNKNOWN:
             case EOP_LOOKUP_KNOWN:
                 cb_log_debug("=========== EVENT[%u]: EOP_LOOKUP (k: %ju)", i, (uintmax_t)e->lookup.k);
-                k.k = e->insert.k;
+                cb_term_set_u64(&key, e->lookup.k);
                 e->t0 = getticks();
                 ret = cb_bst_lookup(state->cb,
                                     state->root,
-                                    &k,
-                                    &v);
+                                    &key,
+                                    &value);
                 e->t1 = getticks();
                 if (ret != 0 && e->op != EOP_LOOKUP_UNKNOWN)
                     abort();
@@ -444,9 +443,10 @@ static void cbmap_handle_events(struct event *events,
             case EOP_INSERT_KNOWN:
                 {
                     cb_log_debug("=========== EVENT[%u]: EOP_INSERT (k: %ju, v:%ju)", i, (uintmax_t)e->insert.k, (uintmax_t)e->insert.v);
-
-                    struct cb_key key = { .k = e->insert.k };
-                    struct cb_value value = { .v = e->insert.v };
+                    struct cb_term key;
+                    struct cb_term value;
+                    cb_term_set_u64(&key, e->insert.k);
+                    cb_term_set_u64(&value, e->insert.v);
                     e->t0 = getticks();
                     ret = cb_map_kv_set(&(state->map), &key, &value);
                     e->t1 = getticks();
@@ -468,7 +468,8 @@ static void cbmap_handle_events(struct event *events,
             case EOP_REMOVE_KNOWN:
                 {
                     cb_log_debug("=========== EVENT[%u]: EOP_REMOVE (k: %ju)", i, (uintmax_t)e->remove.k);
-                    struct cb_key key = { .k = e->remove.k };
+                    struct cb_term key;
+                    cb_term_set_u64(&key, e->remove.k);
                     e->t0 = getticks();
                     ret = cb_map_kv_delete(&(state->map), &key);
                     e->t1 = getticks();
@@ -490,8 +491,9 @@ static void cbmap_handle_events(struct event *events,
             case EOP_LOOKUP_KNOWN:
                 {
                     cb_log_debug("=========== EVENT[%u]: EOP_LOOKUP (k: %ju)", i, (uintmax_t)e->lookup.k);
-                    struct cb_key key = { .k = e->lookup.k };
-                    struct cb_value value;
+                    struct cb_term key;
+                    struct cb_term value;
+                    cb_term_set_u64(&key, e->lookup.k);
                     e->t0 = getticks();
                     ret = cb_map_kv_lookup(&(state->map), &key, &value);
                     e->t1 = getticks();

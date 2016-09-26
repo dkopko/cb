@@ -13,6 +13,7 @@ set(CB_SOURCES
   "${CMAKE_SOURCE_DIR}/src/cb_print.c"
   "${CMAKE_SOURCE_DIR}/src/cb_random.c"
   "${CMAKE_SOURCE_DIR}/src/cb_structmap.c"
+  "${CMAKE_SOURCE_DIR}/src/cb_term.c"
 )
 
 include_directories(

@@ -868,3 +868,42 @@ cb_structmap_condense(struct cb      **cb,
     return -1;
 }
 
+
+int
+cb_structmap_cmp(const struct cb *cb,
+                 cb_offset_t      lhs,
+                 cb_offset_t      rhs)
+{
+    /*FIXME make this value-based by traversal of keys and values.  Right now
+     * it is identity-based. */
+
+    (void)cb;
+    return cb_offset_cmp(lhs, rhs);
+}
+
+
+int
+cb_structmap_render(cb_offset_t    *dest_offset,
+                    struct cb    **cb,
+                    cb_offset_t    node_offset,
+                    unsigned int   flags)
+{
+    (void)dest_offset, (void)cb, (void)node_offset, (void)flags;
+    return -1; /*FIXME Unimplemented */
+}
+
+
+const char*
+cb_structmap_to_str(struct cb   **cb,
+                    cb_offset_t   node_offset)
+{
+    cb_offset_t dest_offset;
+    int ret;
+
+    ret = cb_structmap_render(&dest_offset, cb, node_offset, CB_RENDER_DEFAULT);
+    if (ret != 0)
+        return "(render-error)";
+
+    return (const char*)cb_at(*cb, dest_offset);
+}
+
