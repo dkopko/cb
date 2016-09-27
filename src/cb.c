@@ -231,24 +231,6 @@ extern inline int cb_offset_cmp(cb_offset_t lhs, cb_offset_t rhs);
 extern inline bool cb_offset_lte(cb_offset_t lhs, cb_offset_t rhs);
 
 
-//FIXME log threadid
-void cb_log_impl(enum cb_log_level lvl, const char *fmt, ...)
-{
-    int old_errno;
-    FILE *file;
-    va_list args;
-
-    old_errno = errno;
-
-    file = (lvl == CB_LOG_ERROR ? stderr : stdout);
-    va_start(args, fmt);
-    vfprintf(file, fmt, args);
-    va_end(args);
-
-    errno = old_errno;
-}
-
-
 static size_t ring_size_gte(size_t min_ring_size, size_t page_size)
 {
     size_t ring_size;

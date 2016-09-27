@@ -18,6 +18,7 @@
 #define _CB_H_
 
 #include "cb_assert.h"
+#include "cb_log.h"
 #include "cb_misc.h"
 
 #include <errno.h>
@@ -33,27 +34,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-
-
-enum cb_log_level
-{
-    CB_LOG_DEBUG,
-    CB_LOG_ERROR
-};
-
-
-void cb_log_impl(enum cb_log_level lvl, const char *fmt, ...);
-
-#define cb_log(LVL, FMT, ARGS...) \
-        cb_log_impl(LVL, "[cb|%s():%d] " FMT "\n", __FUNCTION__, __LINE__, \
-                    ##ARGS)
-#define cb_log_error(FMT, ARGS...) cb_log(CB_LOG_ERROR, FMT, ##ARGS)
-#define cb_log_errno(FMT, ARGS...) cb_log(CB_LOG_ERROR, FMT " (\"%m\")", ##ARGS)
-#ifdef CB_VERBOSE
-#define cb_log_debug(FMT, ARGS...) cb_log(CB_LOG_DEBUG, FMT, ##ARGS)
-#else
-#define cb_log_debug(FMT, ARGS...) do { } while(0)
-#endif
 
 
 typedef uintptr_t cb_mask_t;
