@@ -86,7 +86,8 @@ function do_coverage_tests()
     lcov --directory "${BUILD_ROOT}"/Coverage --zerocounters --rc lcov_branch_coverage=1
 
     # Run tests
-    "${BUILD_ROOT}"/Coverage/test_measure --event-count=1000 --ratios=1,1,1,1,1,1 >"${outfile}" 2>&1
+    "${BUILD_ROOT}"/Coverage/test_unit_bst >"${test_root}"/test_unit_bst.out 2>&1
+    "${BUILD_ROOT}"/Coverage/test_measure --event-count=1000 --ratios=1,1,1,1,1,1 >"${test_root}"/test_measure.out 2>&1
 
     # Produce coverage webpages.
     lcov --directory "${BUILD_ROOT}"/Coverage --capture --output-file "${coverage_file}" --rc lcov_branch_coverage=1

@@ -54,6 +54,11 @@ set_target_properties(libcb_static PROPERTIES
 install(TARGETS libcb_static DESTINATION lib)
 
 
+add_executable(test_unit_bst "${CMAKE_SOURCE_DIR}/test/test_unit_bst.c")
+target_link_libraries(test_unit_bst libcb_static)
+set_target_properties(test_unit_bst PROPERTIES
+    LINKER_LANGUAGE C)
+
 
 add_executable(test_misc "${CMAKE_SOURCE_DIR}/test/test_misc.c")
 set_target_properties(test_misc PROPERTIES
