@@ -355,6 +355,19 @@ cb_cursor(const struct cb *cb)
 
 
 /*
+ * Advances the cursor by len bytes.
+ */
+CB_INLINE void
+cb_cursor_advance(struct cb *cb, size_t len)
+{
+    /* new cursor location <= data_end */
+    cb_assert(cb_offset_cmp(cb->cursor + len, cb->data_start + cb_ring_size(cb)) < 1);
+
+    cb->cursor += len;
+}
+
+
+/*
  * Rewinds the cursor of the continous buffer 'cb' to an earlier, lower offset.
  * This is suitable to use if an attempted action failed after allocating some
  * memory, in order to free the memory no longer needed.

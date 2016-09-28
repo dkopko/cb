@@ -62,6 +62,7 @@ try_again:
     }
 
     *dest_offset = dest_cursor;
+    cb_cursor_advance(*cb, str_size);
     return 0;
 }
 

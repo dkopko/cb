@@ -2124,6 +2124,7 @@ cb_bst_render(cb_offset_t   *dest_offset,
     size_t              str_size; /* Including null terminator. */
     int ret;
 
+
     node = cb_bst_node_at(*cb, node_offset);
     if (!node)
         return cb_asprintf(dest_offset, cb, "NIL");
@@ -2176,6 +2177,8 @@ cb_bst_render(cb_offset_t   *dest_offset,
 
     final_dest = (char*)cb_at(*cb, cb_cursor(*cb));
     memmove(final_dest, str, str_size);
+    *dest_offset = cb_cursor(*cb);
+    cb_cursor_advance(*cb, str_size);
     return 0;
 
 fail:
