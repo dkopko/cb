@@ -121,6 +121,10 @@ cb_term_get_structmap(struct cb_term *term)
 }
 
 
+/*
+ * Assigns the term 'rhs' to the term 'lhs'.  This variant is suitable for cases
+ * where 'lhs' and 'rhs' are not known to be distinct.
+ */
 CB_INLINE void
 cb_term_assign(struct cb_term *lhs, const struct cb_term *rhs)
 {
@@ -128,11 +132,27 @@ cb_term_assign(struct cb_term *lhs, const struct cb_term *rhs)
      * Terms have value semantics, even when they represent a graph structure
      * (BSTs, for example).  This is ensured by the persistent nature
      * of such graph structures.  Because of this, a simple memmove will
-     * suffice.  memcpy() is not used to allow for cases where lhs and rhs
-     * point to the same term. FIXME allow a restrict variant which uses
-     * memcpy().
+     * suffice.
      */
     memmove(lhs, rhs, sizeof(*rhs));
+}
+
+
+/*
+ * Assigns the term 'rhs' to the term 'lhs'.  This variant is suitable for cases
+ * where 'lhs' and 'rhs' are known to be distinct.
+ */
+CB_INLINE void
+cb_term_assign_restrict(struct cb_term *__restrict__       lhs,
+                        const struct cb_term *__restrict__ rhs)
+{
+    /*
+     * Terms have value semantics, even when they represent a graph structure
+     * (BSTs, for example).  This is ensured by the persistent nature
+     * of such graph structures.  Because of this, a simple memcpy() will
+     * suffice.
+     */
+    memcpy(lhs, rhs, sizeof(*rhs));
 }
 
 
