@@ -78,6 +78,10 @@ cb_bst_cmp(const struct cb *cb,
            cb_offset_t      lhs,
            cb_offset_t      rhs);
 
+size_t
+cb_bst_size(const struct cb *cb,
+            cb_offset_t      root_node_offset);
+
 int
 cb_bst_render(cb_offset_t   *dest_offset,
               struct cb    **cb,

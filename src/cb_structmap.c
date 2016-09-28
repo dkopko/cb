@@ -882,8 +882,22 @@ cb_structmap_cmp(const struct cb *cb,
 }
 
 
+size_t
+cb_structmap_size(const struct cb *cb,
+                  cb_offset_t      root_node_offset)
+{
+    (void)cb;
+
+    if (root_node_offset == CB_STRUCTMAP_SENTINEL)
+        return 0;
+
+    /* FIXME implement */
+    return 0;
+}
+
+
 int
-cb_structmap_render(cb_offset_t    *dest_offset,
+cb_structmap_render(cb_offset_t   *dest_offset,
                     struct cb    **cb,
                     cb_offset_t    node_offset,
                     unsigned int   flags)

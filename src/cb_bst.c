@@ -2096,6 +2096,20 @@ cb_bst_cmp(const struct cb *cb,
 }
 
 
+size_t
+cb_bst_size(const struct cb *cb,
+            cb_offset_t      root_node_offset)
+{
+    (void)cb;
+
+    if (root_node_offset == CB_BST_SENTINEL)
+        return 0;
+
+    /*FIXME implement */
+    abort();
+}
+
+
 int
 cb_bst_render(cb_offset_t   *dest_offset,
               struct cb    **cb,
@@ -2188,7 +2202,8 @@ fail:
 
 
 const char*
-cb_bst_to_str(struct cb **cb, cb_offset_t node_offset)
+cb_bst_to_str(struct cb   **cb,
+              cb_offset_t   node_offset)
 {
     cb_offset_t dest_offset;
     int ret;
@@ -2199,4 +2214,3 @@ cb_bst_to_str(struct cb **cb, cb_offset_t node_offset)
 
     return (const char*)cb_at(*cb, dest_offset);
 }
-

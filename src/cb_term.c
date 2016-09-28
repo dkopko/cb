@@ -49,12 +49,40 @@ cb_term_cmp(const struct cb      *cb,
             return cb_bst_cmp(cb, lhs->value.bst, rhs->value.bst);
 
         case CB_TERM_STRUCTMAP:
-            return cb_structmap_cmp(cb, lhs->value.bst, rhs->value.bst);
+            return cb_structmap_cmp(cb,
+                                    lhs->value.structmap,
+                                    rhs->value.structmap);
 
         default:
             /* Unreachable */
             abort();
     }
+}
+
+
+size_t
+cb_term_size(const struct cb      *cb,
+             const struct cb_term *term)
+{
+    size_t size = sizeof(struct cb_term);
+
+    /*
+     * Terms types which have external structure need to include the size
+     * of their external structure.
+     */
+    switch (term->tag)
+    {
+        case CB_TERM_BST:
+            return cb_bst_size(cb, term->value.bst);
+
+        case CB_TERM_STRUCTMAP:
+            return cb_structmap_size(cb, term->value.structmap);
+
+        default:
+            break;
+    }
+
+    return size;
 }
 
 

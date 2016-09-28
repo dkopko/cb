@@ -41,23 +41,26 @@ enum cb_term_tag
 };
 
 
+union cb_raw_term
+{
+    uint64_t    u64;
+    double      dbl;
+    cb_offset_t bst;
+    cb_offset_t structmap;
+};
+
+
 struct cb_term
 {
-    unsigned int tag;
-    union
-    {
-        uint64_t    u64;
-        double      dbl;
-        cb_offset_t bst;
-        cb_offset_t structmap;
-    } value;
+    enum cb_term_tag  tag;
+    union cb_raw_term value;
 };
 
 
 CB_INLINE void
 cb_term_set_u64(struct cb_term *term, uint64_t val)
 {
-    term->tag = CB_TERM_U64;
+    term->tag       = CB_TERM_U64;
     term->value.u64 = val;
 }
 
@@ -65,16 +68,70 @@ cb_term_set_u64(struct cb_term *term, uint64_t val)
 CB_INLINE uint64_t
 cb_term_get_u64(struct cb_term *term)
 {
-    cb_assert(term->tag == CB_TERM_U64); /*FIXME will this suffice? */
+    cb_assert(term->tag == CB_TERM_U64);
     return term->value.u64;
+}
+
+
+CB_INLINE void
+cb_term_set_dbl(struct cb_term *term, double val)
+{
+    term->tag       = CB_TERM_DBL;
+    term->value.dbl = val;
+}
+
+
+CB_INLINE double
+cb_term_get_dbl(struct cb_term *term)
+{
+    cb_assert(term->tag == CB_TERM_DBL);
+    return term->value.dbl;
+}
+
+
+CB_INLINE void
+cb_term_set_bst(struct cb_term *term, cb_offset_t bst_root)
+{
+    term->tag       = CB_TERM_BST;
+    term->value.bst = bst_root;
+}
+
+
+CB_INLINE cb_offset_t
+cb_term_get_bst(struct cb_term *term)
+{
+    cb_assert(term->tag == CB_TERM_BST);
+    return term->value.bst;
+}
+
+
+CB_INLINE void
+cb_term_set_structmap(struct cb_term *term, cb_offset_t structmap_root)
+{
+    term->tag             = CB_TERM_STRUCTMAP;
+    term->value.structmap = structmap_root;
+}
+
+
+CB_INLINE cb_offset_t
+cb_term_get_structmap(struct cb_term *term)
+{
+    cb_assert(term->tag == CB_TERM_STRUCTMAP);
+    return term->value.structmap;
 }
 
 
 CB_INLINE void
 cb_term_assign(struct cb_term *lhs, const struct cb_term *rhs)
 {
-    /* FIXME do we need to handle anything with lower-bounds for aggregate
-     * data structures here? */
+    /*
+     * Terms have value semantics, even when they represent a graph structure
+     * (BSTs, for example).  This is ensured by the persistent nature
+     * of such graph structures.  Because of this, a simple memmove will
+     * suffice.  memcpy() is not used to allow for cases where lhs and rhs
+     * point to the same term. FIXME allow a restrict variant which uses
+     * memcpy().
+     */
     memmove(lhs, rhs, sizeof(*rhs));
 }
 
@@ -83,6 +140,16 @@ int
 cb_term_cmp(const struct cb      *cb,
             const struct cb_term *lhs,
             const struct cb_term *rhs);
+
+/*
+ * Returns the overall size of the term and its linked data (in the case of
+ * BSTs, for example), sufficient for allocating a region of memory in a
+ * continuous buffer into which the term's data can be consolidated.
+ */
+size_t
+cb_term_size(const struct cb      *cb,
+             const struct cb_term *term);
+
 
 int
 cb_term_render(cb_offset_t           *dest_offset,

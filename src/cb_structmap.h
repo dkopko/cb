@@ -76,8 +76,12 @@ cb_structmap_cmp(const struct cb *cb,
                  cb_offset_t      lhs,
                  cb_offset_t      rhs);
 
+size_t
+cb_structmap_size(const struct cb *cb,
+                  cb_offset_t      root_node_offset);
+
 int
-cb_structmap_render(cb_offset_t    *dest_offset,
+cb_structmap_render(cb_offset_t   *dest_offset,
                     struct cb    **cb,
                     cb_offset_t    node_offset,
                     unsigned int   flags);
