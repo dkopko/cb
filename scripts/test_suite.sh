@@ -253,6 +253,11 @@ fi
 # Ensure builds are up to date.
 cd "${PROJECT_ROOT}"
 make -j4
+if [[ $? != 0 ]]
+then
+    echo "Build failed." 1>&2
+    exit 1
+fi
 
 # Prepare directory for output of tests.
 [[ ! -d "${TESTRUNS_ROOT}" ]] && mkdir "${TESTRUNS_ROOT}"
@@ -263,6 +268,9 @@ update_symlink_latest
 
 #Save git state.
 save_git_state
+
+# Ensure CB maps get saved with any generated coredumps.
+echo 0xFF >/proc/self/coredump_filter
 
 # Perform tests for coverage.
 do_coverage_tests
