@@ -29,9 +29,11 @@ void cb_log_impl(enum cb_log_level lvl, const char *fmt, ...)
     FILE *file;
     va_list args;
 
+    (void)lvl;
+
     old_errno = errno;
 
-    file = (lvl == CB_LOG_ERROR ? stderr : stdout);
+    file = stdout;
     va_start(args, fmt);
     vfprintf(file, fmt, args);
     va_end(args);
