@@ -71,7 +71,7 @@ cb_bst_traverse(const struct cb        *cb,
 
 void
 cb_bst_print(struct cb   **cb,
-             cb_offset_t   node_offset);
+             cb_offset_t   root_node_offset);
 
 int
 cb_bst_cmp(const struct cb *cb,
@@ -85,11 +85,11 @@ cb_bst_size(const struct cb *cb,
 int
 cb_bst_render(cb_offset_t   *dest_offset,
               struct cb    **cb,
-              cb_offset_t    node_offset,
+              cb_offset_t    root_node_offset,
               unsigned int   flags);
 
 const char*
 cb_bst_to_str(struct cb   **cb,
-              cb_offset_t   node_offset);
+              cb_offset_t   root_node_offset);
 
 #endif /* ! defined _CB_BST_H_*/

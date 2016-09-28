@@ -787,14 +787,19 @@ traverse_left:
 
 void
 cb_bst_print(struct cb   **cb,
-             cb_offset_t   node_offset)
+             cb_offset_t   root_node_offset)
 {
     uint32_t tree_height;
 
-    if (cb_bst_validate(cb, node_offset, NULL, NULL))
+    if (cb_bst_validate(cb, root_node_offset, NULL, NULL))
     {
         /* If we validated, then leverage structural check to print. */
-        cb_bst_validate_structure(cb, node_offset, &tree_height, 0, true, NULL);
+        cb_bst_validate_structure(cb,
+                                  root_node_offset,
+                                  &tree_height,
+                                  0,
+                                  true,
+                                  NULL);
     }
     else
     {
@@ -2113,7 +2118,7 @@ cb_bst_size(const struct cb *cb,
 int
 cb_bst_render(cb_offset_t   *dest_offset,
               struct cb    **cb,
-              cb_offset_t    node_offset,
+              cb_offset_t    root_node_offset,
               unsigned int   flags)
 {
     /*
@@ -2139,7 +2144,7 @@ cb_bst_render(cb_offset_t   *dest_offset,
     int ret;
 
 
-    node = cb_bst_node_at(*cb, node_offset);
+    node = cb_bst_node_at(*cb, root_node_offset);
     if (!node)
         return cb_asprintf(dest_offset, cb, "NIL");
 
@@ -2203,12 +2208,12 @@ fail:
 
 const char*
 cb_bst_to_str(struct cb   **cb,
-              cb_offset_t   node_offset)
+              cb_offset_t   root_node_offset)
 {
     cb_offset_t dest_offset;
     int ret;
 
-    ret = cb_bst_render(&dest_offset, cb, node_offset, CB_RENDER_DEFAULT);
+    ret = cb_bst_render(&dest_offset, cb, root_node_offset, CB_RENDER_DEFAULT);
     if (ret != 0)
         return "(render-error)";
 

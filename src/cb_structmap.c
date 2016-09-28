@@ -899,22 +899,25 @@ cb_structmap_size(const struct cb *cb,
 int
 cb_structmap_render(cb_offset_t   *dest_offset,
                     struct cb    **cb,
-                    cb_offset_t    node_offset,
+                    cb_offset_t    root_node_offset,
                     unsigned int   flags)
 {
-    (void)dest_offset, (void)cb, (void)node_offset, (void)flags;
+    (void)dest_offset, (void)cb, (void)root_node_offset, (void)flags;
     return -1; /*FIXME Unimplemented */
 }
 
 
 const char*
 cb_structmap_to_str(struct cb   **cb,
-                    cb_offset_t   node_offset)
+                    cb_offset_t   root_node_offset)
 {
     cb_offset_t dest_offset;
     int ret;
 
-    ret = cb_structmap_render(&dest_offset, cb, node_offset, CB_RENDER_DEFAULT);
+    ret = cb_structmap_render(&dest_offset,
+                              cb,
+                              root_node_offset,
+                              CB_RENDER_DEFAULT);
     if (ret != 0)
         return "(render-error)";
 
