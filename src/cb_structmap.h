@@ -67,11 +67,6 @@ cb_structmap_delete(struct cb      **cb,
                     cb_offset_t     *struct_offset);
 
 int
-cb_structmap_condense(struct cb   **cb,
-                      cb_offset_t  *root_node_offset,
-                      cb_offset_t   dest_offset);
-
-int
 cb_structmap_cmp(const struct cb *cb,
                  cb_offset_t      lhs,
                  cb_offset_t      rhs);

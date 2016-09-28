@@ -860,16 +860,6 @@ fail:
 
 
 int
-cb_structmap_condense(struct cb      **cb,
-                      cb_offset_t     *root_node_offset,
-                      cb_offset_t      dest_offset)
-{
-    (void)cb, (void)root_node_offset, (void)dest_offset;
-    return -1;
-}
-
-
-int
 cb_structmap_cmp(const struct cb *cb,
                  cb_offset_t      lhs,
                  cb_offset_t      rhs)
