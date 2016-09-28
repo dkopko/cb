@@ -468,17 +468,21 @@ cb_ensure_to(struct cb   **cb,
 CB_INLINE size_t
 cb_contiguous_write_range(struct cb *cb)
 {
-    char *ring_start = (char*)cb_ring_start(cb);
-    char *data_start = (char*)cb_at(cb, cb->data_start);
-    char *cursor     = (char*)cb_at(cb, cb->cursor);
-    char *ring_end   = (char*)cb_ring_end(cb);
+    char *ring_start_ptr = (char*)cb_ring_start(cb);
+    char *data_start_ptr = (char*)cb_at(cb, cb->data_start);
+    char *cursor_ptr     = (char*)cb_at(cb, cb->cursor);
+    char *ring_end_ptr   = (char*)cb_ring_end(cb);
 
-    cb_assert(ring_start <= cursor);
-    cb_assert(ring_start <= data_start);
-    cb_assert(data_start < ring_end);
-    cb_assert(cursor < ring_end);
+    cb_assert(ring_start_ptr <= cursor_ptr);
+    cb_assert(ring_start_ptr <= data_start_ptr);
+    cb_assert(data_start_ptr < ring_end_ptr);
+    cb_assert(cursor_ptr < ring_end_ptr);
 
-    if (cursor >= data_start)
+    /* Check if full. */
+    if (cb_data_size(cb) == cb_ring_size(cb))
+        return 0;
+
+    if (cursor_ptr >= data_start_ptr)
     {
         /*
          *                                       [-loop area-]
@@ -488,8 +492,8 @@ cb_contiguous_write_range(struct cb *cb)
          * ring_start    data_start    cursor    ring_end
          */
 
-        size_t area1_len = (size_t)(data_start - ring_start);
-        size_t area2_len = (size_t)(ring_end - cursor) +
+        size_t area1_len = (size_t)(data_start_ptr - ring_start_ptr);
+        size_t area2_len = (size_t)(ring_end_ptr - cursor_ptr) +
             (area1_len < cb_loop_size(cb) ? area1_len : cb_loop_size(cb));
 
         return area2_len;
@@ -502,7 +506,7 @@ cb_contiguous_write_range(struct cb *cb)
          * ring_start    cursor    data_start    ring_end
          */
 
-        return (size_t)(data_start - cursor);
+        return (size_t)(data_start_ptr - cursor_ptr);
     }
 }
 
@@ -516,17 +520,21 @@ CB_INLINE int
 cb_ensure_free_contiguous(struct cb **cb,
                           size_t      len)
 {
-    char *ring_start = (char*)cb_ring_start(*cb);
-    char *data_start = (char*)cb_at(*cb, (*cb)->data_start);
-    char *cursor     = (char*)cb_at(*cb, (*cb)->cursor);
-    char *ring_end   = (char*)cb_ring_end(*cb);
+    char *ring_start_ptr = (char*)cb_ring_start(*cb);
+    char *data_start_ptr = (char*)cb_at(*cb, (*cb)->data_start);
+    char *cursor_ptr     = (char*)cb_at(*cb, (*cb)->cursor);
+    char *ring_end_ptr   = (char*)cb_ring_end(*cb);
 
-    cb_assert(ring_start <= cursor);
-    cb_assert(ring_start <= data_start);
-    cb_assert(data_start < ring_end);
-    cb_assert(cursor < ring_end);
+    cb_assert(ring_start_ptr <= cursor_ptr);
+    cb_assert(ring_start_ptr <= data_start_ptr);
+    cb_assert(data_start_ptr < ring_end_ptr);
+    cb_assert(cursor_ptr < ring_end_ptr);
 
-    if (cursor >= data_start)
+    /* If full, grow. */
+    if (cb_data_size(*cb) == cb_ring_size(*cb))
+        goto grow;
+
+    if (cursor_ptr >= data_start_ptr)
     {
         /*
          *                                       [-loop area-]
@@ -536,8 +544,8 @@ cb_ensure_free_contiguous(struct cb **cb,
          * ring_start    data_start    cursor    ring_end
          */
 
-        size_t area1_len = (size_t)(data_start - ring_start);
-        size_t area2_len = (size_t)(ring_end - cursor) +
+        size_t area1_len = (size_t)(data_start_ptr - ring_start_ptr);
+        size_t area2_len = (size_t)(ring_end_ptr - cursor_ptr) +
             (area1_len < cb_loop_size(*cb) ? area1_len : cb_loop_size(*cb));
 
         if (len < area2_len)
@@ -545,7 +553,7 @@ cb_ensure_free_contiguous(struct cb **cb,
 
         if (len < area1_len)
         {
-            (*cb)->cursor += (ring_end - cursor);
+            (*cb)->cursor += (ring_end_ptr - cursor_ptr);
             return 0;
         }
     }
@@ -557,10 +565,11 @@ cb_ensure_free_contiguous(struct cb **cb,
          * ring_start    cursor    data_start    ring_end
          */
 
-        if ((size_t)(data_start - cursor) < len)
+        if ((size_t)(data_start_ptr - cursor_ptr) < len)
             return 0;
     }
 
+grow:
     return cb_grow(cb, cb_ring_size(*cb) + len);
 }
 
