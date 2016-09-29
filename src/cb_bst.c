@@ -138,6 +138,19 @@ Garbage Collection
 */
 
 
+/*
+ * This header structure is used for O(1) maintenance and determinations of
+ * cb_bst_size(). The 'total_size' field represents the sum total of the size of
+ * this header, the internal nodes, and the external structures rooted at terms
+ * within keys or values of this BST.
+ */
+struct cb_bst_header
+{
+    size_t      total_size;
+    cb_offset_t root_node_offset;
+};
+
+
 struct cb_bst_node
 {
     struct cb_term key;
@@ -166,6 +179,7 @@ struct cb_bst_mutate_state
     cb_offset_t parent_node_offset;
     cb_offset_t curr_node_offset;
     cb_offset_t sibling_node_offset;  /* Only maintained for deletes. */
+    cb_offset_t new_header_offset;
     cb_offset_t new_root_node_offset;
     cb_offset_t cutoff_offset;
     int         greatgrandparent_to_grandparent_dir; /* Only maintained for inserts. */
@@ -207,6 +221,17 @@ struct cb_bst_sequence_check_state
     bool             failed;
     bool             do_print;
 };
+
+
+CB_INLINE struct cb_bst_header*
+cb_bst_header_at(const struct cb *cb,
+                 cb_offset_t      header_offset)
+{
+    if (header_offset == CB_BST_SENTINEL)
+        return NULL;
+
+    return (struct cb_bst_header*)cb_at(cb, header_offset);
+}
 
 
 CB_INLINE struct cb_bst_node*
@@ -283,7 +308,7 @@ cb_bst_sequence_check(const struct cb_term *key,
 
 static bool
 cb_bst_validate_sequence(struct cb   **cb,
-                         cb_offset_t   node_offset,
+                         cb_offset_t   header_offset,
                          bool          do_print)
 {
     struct cb_bst_sequence_check_state scs = {
@@ -297,7 +322,7 @@ cb_bst_validate_sequence(struct cb   **cb,
 
     (void)ret;
 
-    ret = cb_bst_traverse(*cb, node_offset, cb_bst_sequence_check, &scs);
+    ret = cb_bst_traverse(*cb, header_offset, cb_bst_sequence_check, &scs);
     cb_assert(ret == 0);
 
     return scs.failed ? false : true;
@@ -439,24 +464,33 @@ cb_bst_validate_structure(struct cb                        **cb,
 
 static bool
 cb_bst_validate(struct cb                       **cb,
-                cb_offset_t                       node_offset,
+                cb_offset_t                       header_offset,
                 const char                       *name,
                 const struct cb_bst_mutate_state *s)
 {
-    uint32_t tree_height;
-    bool     sequence_ok,
-             structure_ok;
+    struct cb_bst_header *header;
+    cb_offset_t           root_node_offset;
+    uint32_t              tree_height;
+    bool                  sequence_ok,
+                          structure_ok;
 
     (void)s;
 
+    if (header_offset == CB_BST_SENTINEL)
+        return true;
+
+    header = cb_bst_header_at(*cb, header_offset);
+    root_node_offset = header->root_node_offset;
+    cb_assert(root_node_offset != CB_BST_SENTINEL);
+
     /* First, just validate without printing. */
-    sequence_ok  = cb_bst_validate_sequence(cb, node_offset, false);
+    sequence_ok  = cb_bst_validate_sequence(cb, header_offset, false);
     structure_ok = cb_bst_validate_structure(cb,
-                                            node_offset,
-                                            &tree_height,
-                                            0,
-                                            false,
-                                            s);
+                                             root_node_offset,
+                                             &tree_height,
+                                             0,
+                                             false,
+                                             s);
     if (sequence_ok && structure_ok)
         return true;
 
@@ -465,7 +499,9 @@ cb_bst_validate(struct cb                       **cb,
     {
         cb_log_error("BEGIN ERROR PRINT OF SEQUENCE %s",
                      name == NULL ? "" : name);
-        cb_bst_validate_sequence(cb, node_offset, true);
+
+        cb_bst_validate_sequence(cb, header_offset, true);
+
         cb_log_error("END   ERROR PRINT OF SEQUENCE %s",
                      name == NULL ? "" : name);
     }
@@ -474,7 +510,14 @@ cb_bst_validate(struct cb                       **cb,
     {
         cb_log_error("BEGIN ERROR PRINT OF STRUCTURE %s",
                      name == NULL ? "" : name);
-        cb_bst_validate_structure(cb, node_offset, &tree_height, 0, true, s);
+
+        cb_bst_validate_structure(cb,
+                                  root_node_offset,
+                                  &tree_height,
+                                  0,
+                                  true,
+                                  s);
+
         cb_log_error("END   ERROR PRINT OF STRUCTURE %s",
                      name == NULL ? "" : name);
     }
@@ -558,6 +601,26 @@ cb_bst_mutate_state_validate(struct cb                  *cb,
 
 
 static int
+cb_bst_header_alloc(struct cb   **cb,
+                    cb_offset_t  *header_offset)
+{
+    cb_offset_t new_header_offset;
+    int ret;
+
+    ret = cb_memalign(cb,
+                      &new_header_offset,
+                      cb_alignof(struct cb_bst_header),
+                      sizeof(struct cb_bst_header));
+    if (ret != 0)
+        return ret;
+
+    *header_offset = new_header_offset;
+
+    return 0;
+}
+
+
+static int
 cb_bst_node_alloc(struct cb   **cb,
                   cb_offset_t  *node_offset)
 {
@@ -620,11 +683,20 @@ cb_bst_find_path(struct cb_bst_iter   *iter,
 
 bool
 cb_bst_contains_key(const struct cb      *cb,
-                    cb_offset_t           root_node_offset,
+                    cb_offset_t           header_offset,
                     const struct cb_term *key)
 {
-    struct cb_bst_iter iter;
+    struct cb_bst_iter    iter;
+    struct cb_bst_header *header;
+    cb_offset_t           root_node_offset;
     int ret;
+
+    if (header_offset == CB_BST_SENTINEL)
+        return false;
+
+    header = cb_bst_header_at(cb, header_offset);
+    root_node_offset = header->root_node_offset;
+    cb_assert(root_node_offset != CB_BST_SENTINEL);
 
     ret = cb_bst_find_path(&iter,
                            cb,
@@ -636,12 +708,24 @@ cb_bst_contains_key(const struct cb      *cb,
 
 int
 cb_bst_lookup(const struct cb      *cb,
-              cb_offset_t           root_node_offset,
+              cb_offset_t           header_offset,
               const struct cb_term *key,
               struct cb_term       *value)
 {
-    struct cb_bst_iter iter;
+    struct cb_bst_iter    iter;
+    struct cb_bst_header *header;
+    cb_offset_t           root_node_offset;
     int ret;
+
+    if (header_offset == CB_BST_SENTINEL)
+    {
+        ret = -1;
+        goto fail;
+    }
+
+    header = cb_bst_header_at(cb, header_offset);
+    root_node_offset = header->root_node_offset;
+    cb_assert(root_node_offset != CB_BST_SENTINEL);
 
     /*
      * NOTE: cb would only need mutation on structural failures (for printing of
@@ -649,7 +733,7 @@ cb_bst_lookup(const struct cb      *cb,
      * but rather hack it with a cast.
      */
     cb_heavy_assert(cb_bst_validate((struct cb **)&cb,
-                                    root_node_offset,
+                                    header_offset,
                                     "pre-lookup",
                                     NULL));
 
@@ -665,11 +749,34 @@ cb_bst_lookup(const struct cb      *cb,
 fail:
     /* See NOTE above. */
     cb_heavy_assert(cb_bst_validate((struct cb **)&cb,
-                                    root_node_offset,
+                                    header_offset,
                                     (ret == 0 ? "post-lookup-success" :
                                                 "post-lookup-fail"),
                                     NULL));
     return ret;
+}
+
+
+static int
+cb_bst_header_copy(struct cb   **cb,
+                   cb_offset_t  *header_offset)
+{
+    cb_offset_t           new_header_offset;
+    struct cb_bst_header *old_header,
+                         *new_header;
+    int ret;
+
+    ret = cb_bst_header_alloc(cb, &new_header_offset);
+    if (ret != 0)
+        return ret;
+
+    old_header = cb_bst_header_at(*cb, *header_offset);
+    new_header = cb_bst_header_at(*cb, new_header_offset);
+    memcpy(new_header, old_header, sizeof(*new_header));
+
+    *header_offset = new_header_offset;
+
+    return 0;
 }
 
 
@@ -746,17 +853,21 @@ cb_bst_select_modifiable_node(struct cb          **cb,
 
 int
 cb_bst_traverse(const struct cb        *cb,
-                cb_offset_t             root_node_offset,
+                cb_offset_t             header_offset,
                 cb_bst_traverse_func_t  func,
                 void                   *closure)
 {
-    struct cb_bst_iter iter;
-    cb_offset_t        curr_node_offset;
+    struct cb_bst_iter    iter;
+    struct cb_bst_header *header;
+    cb_offset_t           curr_node_offset;
     int ret;
 
-    curr_node_offset = root_node_offset;
-    if (curr_node_offset == CB_BST_SENTINEL)
+    if (header_offset == CB_BST_SENTINEL)
         return 0;
+
+    header = cb_bst_header_at(cb, header_offset);
+    curr_node_offset = header->root_node_offset;
+    cb_assert(curr_node_offset != CB_BST_SENTINEL);
 
     iter.depth = 0;
 
@@ -787,11 +898,20 @@ traverse_left:
 
 void
 cb_bst_print(struct cb   **cb,
-             cb_offset_t   root_node_offset)
+             cb_offset_t   header_offset)
 {
-    uint32_t tree_height;
+    cb_offset_t           root_node_offset = CB_BST_SENTINEL;
+    struct cb_bst_header *header;
+    uint32_t              tree_height;
 
-    if (cb_bst_validate(cb, root_node_offset, NULL, NULL))
+    if (header_offset == CB_BST_SENTINEL)
+        return;
+
+    header = cb_bst_header_at(*cb, header_offset);
+    root_node_offset = header->root_node_offset;
+    cb_assert(root_node_offset != CB_BST_SENTINEL);
+
+    if (cb_bst_validate(cb, header_offset, NULL, NULL))
     {
         /* If we validated, then leverage structural check to print. */
         cb_bst_validate_structure(cb,
@@ -1044,34 +1164,60 @@ cb_bst_red_pair_fixup_double(struct cb                  **cb,
 /* NOTE: Insertion uses a top-down method. */
 int
 cb_bst_insert(struct cb            **cb,
-              cb_offset_t           *root_node_offset,
+              cb_offset_t           *header_offset,
               cb_offset_t            cutoff_offset,
               const struct cb_term  *key,
               const struct cb_term  *value)
 {
-    struct cb_bst_mutate_state s = CB_BST_MUTATE_STATE_INIT;
-    cb_offset_t         initial_cursor_offset = cb_cursor(*cb),
-                        left_child_offset,
-                        right_child_offset;
-    struct cb_bst_node *parent_node,
-                       *curr_node,
-                       *left_child_node,
-                       *right_child_node,
-                       *root_node;
-    int                 cmp;
+    struct cb_bst_mutate_state  s = CB_BST_MUTATE_STATE_INIT;
+    struct cb_bst_header       *header;
+    cb_offset_t                 initial_cursor_offset = cb_cursor(*cb),
+                                left_child_offset,
+                                right_child_offset;
+    struct cb_bst_node         *parent_node,
+                               *curr_node,
+                               *left_child_node,
+                               *right_child_node,
+                               *root_node;
+    int                         cmp;
+    ssize_t                     size_adjust = 0;
     int ret;
 
     cb_log_debug("insert of key %s, value %s",
                  cb_term_to_str(cb, key),
                  cb_term_to_str(cb, value));
 
-    s.new_root_node_offset = *root_node_offset;
-    s.curr_node_offset = s.new_root_node_offset;
-    s.cutoff_offset    = cutoff_offset;
+    /* Prepare a new header. */
+    s.new_header_offset = *header_offset;
+    if (s.new_header_offset == CB_BST_SENTINEL)
+    {
+        ret = cb_bst_header_alloc(cb, &s.new_header_offset);
+        if (ret != 0)
+            goto fail;
+
+        header = cb_bst_header_at(*cb, s.new_header_offset);
+        header->total_size       = sizeof(struct cb_bst_header);
+        header->root_node_offset = CB_BST_SENTINEL;
+    }
+    else
+    {
+        ret = cb_bst_header_copy(cb, &s.new_header_offset);
+        if (ret != 0)
+            goto fail;
+
+        header = cb_bst_header_at(*cb, s.new_header_offset);
+        cb_assert(header->root_node_offset != CB_BST_SENTINEL);
+    }
+
+    /* Prepare the rest of the mutation state. */
+    s.new_root_node_offset = header->root_node_offset;
+    s.curr_node_offset     = s.new_root_node_offset;
+    s.cutoff_offset        = cutoff_offset;
 
     cb_assert(cb_bst_mutate_state_validate(*cb, &s));
-    cb_heavy_assert(cb_bst_validate(cb, *root_node_offset, "pre-insert", &s));
+    cb_heavy_assert(cb_bst_validate(cb, *header_offset, "pre-insert", &s));
 
+    /* Handle empty BSTs. */
     if (s.curr_node_offset == CB_BST_SENTINEL)
     {
         /* The tree is empty, insert a new black node. */
@@ -1086,15 +1232,22 @@ cb_bst_insert(struct cb            **cb,
         cb_term_assign(&(curr_node->key), key);
         cb_term_assign(&(curr_node->value), value);
 
-        *root_node_offset = s.curr_node_offset;
+        header = cb_bst_header_at(*cb, s.new_header_offset);
+        header->total_size       += (sizeof(struct cb_bst_node)
+                                    + cb_term_size(*cb, key)
+                                    + cb_term_size(*cb, value));
+        header->root_node_offset =  s.curr_node_offset;
+
+        *header_offset = s.new_header_offset;
 
         cb_heavy_assert(cb_bst_validate(cb,
-                                        *root_node_offset,
+                                        *header_offset,
                                         "post-insert-success0",
                                         &s));
         return 0;
     }
 
+    /* Begin path-copying downwards. */
     ret = cb_bst_select_modifiable_node(cb,
                                         cutoff_offset,
                                         &s.curr_node_offset);
@@ -1125,7 +1278,9 @@ entry:
         {
             /* The key already exists in this tree.  Update the value at key
                and go no further. */
+            size_adjust -= (ssize_t)cb_term_size(*cb, &(curr_node->value));
             cb_term_assign(&(curr_node->value), value);
+            size_adjust += (ssize_t)cb_term_size(*cb, &(curr_node->value));
             goto done;
         }
         s.dir = (cmp == 1);
@@ -1216,6 +1371,10 @@ entry:
     cb_term_assign(&(curr_node->key), key);
     cb_term_assign(&(curr_node->value), value);
 
+    size_adjust = (ssize_t)(sizeof(struct cb_bst_node)
+                            + cb_term_size(*cb, &(curr_node->key))
+                            + cb_term_size(*cb, &(curr_node->value)));
+
     if (cb_bst_node_is_red(*cb, s.parent_node_offset))
     {
         if (s.grandparent_to_parent_dir == s.parent_to_curr_dir)
@@ -1231,10 +1390,14 @@ done:
     root_node = cb_bst_node_at(*cb, s.new_root_node_offset);
     root_node->color = CB_BST_BLACK;
 
-    *root_node_offset = s.new_root_node_offset;
+    header = cb_bst_header_at(*cb, s.new_header_offset);
+    header->total_size       += size_adjust;
+    header->root_node_offset =  s.new_root_node_offset;
+
+    *header_offset = s.new_header_offset;
 
     cb_heavy_assert(cb_bst_validate(cb,
-                                    *root_node_offset,
+                                    *header_offset,
                                     "post-insert-success",
                                     &s));
     return 0;
@@ -1242,7 +1405,7 @@ done:
 fail:
     cb_rewind_to(*cb, initial_cursor_offset);
     cb_heavy_assert(cb_bst_validate(cb,
-                                    *root_node_offset,
+                                    *header_offset,
                                     "post-insert-fail",
                                     &s));
     return ret;
@@ -1838,32 +2001,52 @@ cb_bst_delete_case5(struct cb                  **cb,
 
 int
 cb_bst_delete(struct cb            **cb,
-              cb_offset_t           *root_node_offset,
+              cb_offset_t           *header_offset,
               cb_offset_t            cutoff_offset,
               const struct cb_term  *key)
 {
-    struct cb_bst_mutate_state s = CB_BST_MUTATE_STATE_INIT;
-    cb_offset_t         initial_cursor_offset = cb_cursor(*cb),
-                        found_node_offset = CB_BST_SENTINEL;
-    struct cb_bst_node *root_node,
-                       *parent_node,
-                       *curr_node;
-    int                 cmp;
+    struct cb_bst_mutate_state  s = CB_BST_MUTATE_STATE_INIT;
+    struct cb_bst_header       *header;
+    cb_offset_t                 initial_cursor_offset = cb_cursor(*cb),
+                                found_node_offset = CB_BST_SENTINEL;
+    struct cb_bst_node         *root_node,
+                               *parent_node,
+                               *curr_node,
+                               *found_node;
+    int                         cmp;
+    size_t                      size_subtract = 0;
     int ret;
 
-    s.curr_node_offset = *root_node_offset;
-    s.cutoff_offset    = cutoff_offset;
+    cb_log_debug("delete of key %s", cb_term_to_str(cb, key));
 
-    cb_assert(cb_bst_mutate_state_validate(*cb, &s));
-    cb_heavy_assert(cb_bst_validate(cb, *root_node_offset, "pre-delete", &s));
-
-    /* For empty trees, there is nothing to do. */
-    if (s.curr_node_offset == CB_BST_SENTINEL)
+    /* Prepare a new header. */
+    s.new_header_offset = *header_offset;
+    if (s.new_header_offset == CB_BST_SENTINEL)
     {
+        /* For empty trees, there is nothing to do. */
         ret = -1;
         goto fail;
     }
 
+    ret = cb_bst_header_copy(cb, &s.new_header_offset);
+    if (ret != 0)
+        goto fail;
+
+    header = cb_bst_header_at(*cb, s.new_header_offset);
+    cb_assert(header->root_node_offset != CB_BST_SENTINEL);
+
+
+    /* Prepare the rest of the mutation state. */
+    s.new_root_node_offset = header->root_node_offset;
+    s.curr_node_offset     = s.new_root_node_offset;
+    s.cutoff_offset        = cutoff_offset;
+
+
+    cb_assert(cb_bst_mutate_state_validate(*cb, &s));
+    cb_heavy_assert(cb_bst_validate(cb, *header_offset, "pre-delete", &s));
+
+
+    /* Begin path-copying downwards. */
     ret = cb_bst_select_modifiable_node(cb,
                                         cutoff_offset,
                                         &s.curr_node_offset);
@@ -2024,6 +2207,10 @@ descend:
         ret = -1;
         goto fail;
     }
+    found_node = cb_bst_node_at(*cb, found_node_offset);
+    size_subtract = sizeof(struct cb_bst_node)
+                    + cb_term_size(*cb, &(found_node->key))
+                    + cb_term_size(*cb, &(found_node->value));
 
     cb_assert(s.parent_node_offset != CB_BST_SENTINEL);
     cb_assert(s.curr_node_offset == CB_BST_SENTINEL);
@@ -2031,13 +2218,10 @@ descend:
     cb_assert(cb_bst_node_is_black(*cb, s.grandparent_node_offset) ||
            s.grandparent_node_offset == s.new_root_node_offset);
 
-
     if (found_node_offset != s.parent_node_offset)
     {
-        struct cb_bst_node *found_node;
         struct cb_bst_node *to_delete_node;
 
-        found_node     = cb_bst_node_at(*cb, found_node_offset);
         to_delete_node = cb_bst_node_at(*cb, s.parent_node_offset);
         cb_term_assign(&(found_node->key), &(to_delete_node->key));
         cb_term_assign(&(found_node->value), &(to_delete_node->value));
@@ -2048,7 +2232,7 @@ descend:
         struct cb_bst_node *grandparent_node;
 
         cb_assert(cb_bst_node_is_modifiable(s.grandparent_node_offset,
-                                         cutoff_offset));
+                                            cutoff_offset));
         grandparent_node = cb_bst_node_at(*cb, s.grandparent_node_offset);
         cb_assert(grandparent_node->child[s.grandparent_to_parent_dir] ==
                s.parent_node_offset);
@@ -2069,19 +2253,29 @@ descend:
         root_node->color = CB_BST_BLACK;
     }
 
-    *root_node_offset = s.new_root_node_offset;
+    header = cb_bst_header_at(*cb, s.new_header_offset);
+    cb_assert(size_subtract < header->total_size);
+    header->total_size       -= size_subtract;
+    header->root_node_offset =  s.new_root_node_offset;
+
+    /* Disallow header + empty BST. */
+    if (s.new_root_node_offset == CB_BST_SENTINEL)
+        *header_offset = CB_BST_SENTINEL;
+    else
+        *header_offset = s.new_header_offset;
 
     cb_heavy_assert(cb_bst_validate(cb,
-                                    *root_node_offset,
+                                    *header_offset,
                                     "post-delete-success",
                                     &s));
+
     return 0;
 
 fail:
     cb_rewind_to(*cb, initial_cursor_offset);
     cb_assert(ret != 0); /* ret == 0 implies an implementation error. */
     cb_heavy_assert(cb_bst_validate(cb,
-                                    *root_node_offset,
+                                    *header_offset,
                                     "post-delete-fail",
                                     &s));
     return ret;
@@ -2090,36 +2284,33 @@ fail:
 
 int
 cb_bst_cmp(const struct cb *cb,
-           cb_offset_t      lhs,
-           cb_offset_t      rhs)
+           cb_offset_t      lhs_header_offset,
+           cb_offset_t      rhs_header_offset)
 {
     /*FIXME make this value-based by traversal of keys and values.  Right now
      * it is identity-based. */
 
     (void)cb;
-    return cb_offset_cmp(lhs, rhs);
+    return cb_offset_cmp(lhs_header_offset, rhs_header_offset);
 }
 
 
 size_t
 cb_bst_size(const struct cb *cb,
-            cb_offset_t      root_node_offset)
+            cb_offset_t      header_offset)
 {
-    (void)cb;
-
-    if (root_node_offset == CB_BST_SENTINEL)
+    if (header_offset == CB_BST_SENTINEL)
         return 0;
 
-    /*FIXME implement */
-    abort();
+    return cb_bst_header_at(cb, header_offset)->total_size;
 }
 
 
-int
-cb_bst_render(cb_offset_t   *dest_offset,
-              struct cb    **cb,
-              cb_offset_t    root_node_offset,
-              unsigned int   flags)
+static int
+cb_bst_render_node(cb_offset_t   *dest_offset,
+                   struct cb    **cb,
+                   cb_offset_t    node_offset,
+                   unsigned int   flags)
 {
     /*
      * FIXME this is a very crap implementation which probably has O(n^2) or
@@ -2144,7 +2335,7 @@ cb_bst_render(cb_offset_t   *dest_offset,
     int ret;
 
 
-    node = cb_bst_node_at(*cb, root_node_offset);
+    node = cb_bst_node_at(*cb, node_offset);
     if (!node)
         return cb_asprintf(dest_offset, cb, "NIL");
 
@@ -2156,11 +2347,11 @@ cb_bst_render(cb_offset_t   *dest_offset,
     if (ret == 0)
         valstr = (const char*)cb_at(*cb, valstr_offset);
 
-    ret = cb_bst_render(&leftstr_offset, cb, node->child[0], flags);
+    ret = cb_bst_render_node(&leftstr_offset, cb, node->child[0], flags);
     if (ret == 0)
         leftstr = (const char*)cb_at(*cb, leftstr_offset);
 
-    ret = cb_bst_render(&rightstr_offset, cb, node->child[1], flags);
+    ret = cb_bst_render_node(&rightstr_offset, cb, node->child[1], flags);
     if (ret == 0)
         rightstr = (const char*)cb_at(*cb, rightstr_offset);
 
@@ -2206,14 +2397,32 @@ fail:
 }
 
 
+int
+cb_bst_render(cb_offset_t   *dest_offset,
+              struct cb    **cb,
+              cb_offset_t    header_offset,
+              unsigned int   flags)
+{
+    struct cb_bst_header *header;
+
+    if (header_offset == CB_BST_SENTINEL)
+        return cb_asprintf(dest_offset, cb, "NIL");
+
+    header = cb_bst_header_at(*cb, header_offset);
+    cb_assert(header->root_node_offset != CB_BST_SENTINEL);
+
+    return cb_bst_render_node(dest_offset, cb, header->root_node_offset, flags);
+}
+
+
 const char*
 cb_bst_to_str(struct cb   **cb,
-              cb_offset_t   root_node_offset)
+              cb_offset_t   header_offset)
 {
     cb_offset_t dest_offset;
     int ret;
 
-    ret = cb_bst_render(&dest_offset, cb, root_node_offset, CB_RENDER_DEFAULT);
+    ret = cb_bst_render(&dest_offset, cb, header_offset, CB_RENDER_DEFAULT);
     if (ret != 0)
         return "(render-error)";
 

@@ -130,6 +130,11 @@ main(int argc, char **argv)
     /* Test comparison, equal to. */
     /* Test comparison, greater than. */
 
+
+    /* Test size. */
+    printf("Size: %zu\n", cb_bst_size(cb, bst_root));
+
+
     /* Test render. */
     {
         cb_offset_t dest_offset;

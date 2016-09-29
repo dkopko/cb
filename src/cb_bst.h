@@ -37,26 +37,26 @@ enum
 
 int
 cb_bst_insert(struct cb            **cb,
-              cb_offset_t           *root_node_offset,
+              cb_offset_t           *header_offset,
               cb_offset_t            cutoff_offset,
               const struct cb_term  *key,
               const struct cb_term  *value);
 
 int
 cb_bst_lookup(const struct cb      *cb,
-              cb_offset_t           root_node_offset,
+              cb_offset_t           header_offset,
               const struct cb_term *key,
               struct cb_term       *value);
 
 int
 cb_bst_delete(struct cb            **cb,
-              cb_offset_t           *root_node_offset,
+              cb_offset_t           *header_offset,
               cb_offset_t            cutoff_offset,
               const struct cb_term  *key);
 
 bool
 cb_bst_contains_key(const struct cb      *cb,
-                    cb_offset_t           root_node_offset,
+                    cb_offset_t           header_offset,
                     const struct cb_term *key);
 
 typedef int (*cb_bst_traverse_func_t)(const struct cb_term *key,
@@ -65,31 +65,31 @@ typedef int (*cb_bst_traverse_func_t)(const struct cb_term *key,
 
 int
 cb_bst_traverse(const struct cb        *cb,
-                cb_offset_t             root_node_offset,
+                cb_offset_t             header_offset,
                 cb_bst_traverse_func_t  func,
                 void                   *closure);
 
 void
 cb_bst_print(struct cb   **cb,
-             cb_offset_t   root_node_offset);
+             cb_offset_t   header_offset);
 
 int
 cb_bst_cmp(const struct cb *cb,
-           cb_offset_t      lhs,
-           cb_offset_t      rhs);
+           cb_offset_t      lhs_header_offset,
+           cb_offset_t      rhs_header_offset);
 
 size_t
 cb_bst_size(const struct cb *cb,
-            cb_offset_t      root_node_offset);
+            cb_offset_t      header_offset);
 
 int
 cb_bst_render(cb_offset_t   *dest_offset,
               struct cb    **cb,
-              cb_offset_t    root_node_offset,
+              cb_offset_t    header_offset,
               unsigned int   flags);
 
 const char*
 cb_bst_to_str(struct cb   **cb,
-              cb_offset_t   root_node_offset);
+              cb_offset_t   header_offset);
 
 #endif /* ! defined _CB_BST_H_*/
