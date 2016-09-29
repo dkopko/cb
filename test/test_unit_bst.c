@@ -132,7 +132,72 @@ main(int argc, char **argv)
 
 
     /* Test size. */
-    printf("Size: %zu\n", cb_bst_size(cb, bst_root));
+    {
+        cb_offset_t    bst1 = CB_BST_SENTINEL,
+                       bst2 = CB_BST_SENTINEL;
+        struct cb_term key1,
+                       key2,
+                       key3,
+                       key4,
+                       value1,
+                       value2,
+                       value3,
+                       value4;
+        size_t         empty_size,
+                       header_size,
+                       node_size,
+                       size1,
+                       size2,
+                       size3,
+                       size4,
+                       size5,
+                       bst1_size;
+
+        (void)size3, (void)size4, (void)size5, (void)bst1_size;
+
+        cb_term_set_u64(&key1, 111);
+        cb_term_set_u64(&key2, 222);
+        cb_term_set_u64(&key3, 333);
+        cb_term_set_u64(&key4, 444);
+        cb_term_set_u64(&value1, 1);
+        cb_term_set_u64(&value2, 2);
+        cb_term_set_u64(&value3, 3);
+
+        empty_size = cb_bst_size(cb, bst1);
+        cb_assert(empty_size == 0);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
+        cb_assert(ret == 0);
+        size1 = cb_bst_size(cb, bst1);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value2);
+        cb_assert(ret == 0);
+        size2 = cb_bst_size(cb, bst1);
+
+        node_size = (size2 - size1);
+        header_size = (size1 - empty_size) - node_size;
+        cb_assert(size1 == header_size + node_size);
+        printf("header_size: %zu\n", header_size);
+        printf("node_size: %zu\n", node_size);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key3, &value3);
+        cb_assert(ret == 0);
+        size3 = cb_bst_size(cb, bst1);
+        cb_assert(size3 - size2 == node_size);
+
+        ret = cb_bst_delete(&cb, &bst1, 0, &key2);
+        cb_assert(ret == 0);
+        size4 = cb_bst_size(cb, bst1);
+        cb_assert(size4 == size2);
+
+        bst1_size = cb_bst_size(cb, bst1);
+        cb_term_set_bst(&value4, bst1);
+
+        ret = cb_bst_insert(&cb, &bst2, 0, &key4, &value4);
+        cb_assert(ret == 0);
+        size5 = cb_bst_size(cb, bst2);
+        cb_assert(size5 == header_size + node_size + bst1_size);
+    }
 
 
     /* Test render. */
