@@ -82,6 +82,53 @@ cb_term_external_size(const struct cb      *cb,
 }
 
 
+void
+cb_term_hash_continue(cb_hash_state_t      *hash_state,
+                      const struct cb      *cb,
+                      const struct cb_term *term)
+{
+    cb_hash_continue(hash_state, &(term->tag), sizeof(term->tag));
+
+    switch (term->tag)
+    {
+        case CB_TERM_U64:
+            cb_hash_continue(hash_state,
+                             &(term->value.u64),
+                             sizeof(term->value.u64));
+            break;
+
+        case CB_TERM_DBL:
+            cb_hash_continue(hash_state,
+                             &(term->value.dbl),
+                             sizeof(term->value.dbl));
+            break;
+
+        case CB_TERM_BST:
+            cb_bst_hash_continue(hash_state, cb, term->value.bst);
+            break;
+
+        case CB_TERM_STRUCTMAP:
+            cb_structmap_hash_continue(hash_state, cb, term->value.structmap);
+            break;
+
+        default:
+            break;
+    }
+}
+
+
+cb_hash_t
+cb_term_hash(const struct cb      *cb,
+             const struct cb_term *term)
+{
+    cb_hash_state_t hash_state;
+
+    cb_hash_init(&hash_state);
+    cb_term_hash_continue(&hash_state, cb, term);
+    return cb_hash_finalize(&hash_state);
+}
+
+
 int
 cb_term_render(cb_offset_t           *dest_offset,
                struct cb            **cb,

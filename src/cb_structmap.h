@@ -18,6 +18,7 @@
 #define _CB_STRUCTMAP_H_
 
 #include "cb.h"
+#include "cb_hash.h"
 
 /*
  * The purpose of the cb_structmap is to contain a mapping of cb_struct_id_t ->
@@ -73,6 +74,15 @@ cb_structmap_cmp(const struct cb *cb,
 
 size_t
 cb_structmap_size(const struct cb *cb,
+                  cb_offset_t      root_node_offset);
+
+void
+cb_structmap_hash_continue(cb_hash_state_t *hash_state,
+                           const struct cb *cb,
+                           cb_offset_t      root_node_offset);
+
+cb_hash_t
+cb_structmap_hash(const struct cb *cb,
                   cb_offset_t      root_node_offset);
 
 int

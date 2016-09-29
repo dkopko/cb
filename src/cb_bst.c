@@ -17,6 +17,7 @@
 #include "cb.h"
 #include "cb_assert.h"
 #include "cb_bst.h"
+#include "cb_hash.h"
 #include "cb_print.h"
 #include "cb_term.h"
 
@@ -142,11 +143,17 @@ Garbage Collection
  * This header structure is used for O(1) maintenance and determinations of
  * cb_bst_size(). The 'total_size' field represents the sum total of the size of
  * this header, the internal nodes, and the external structures rooted at terms
- * within keys or values of this BST.
+ * within keys or values of this BST.  The 'hash_value' field represents a hash
+ * code for all the contained keys and values, but not the internal structure of
+ * the BST.  This is because we want two BSTs to have the same hash code if they
+ * contain the exact same set of key-value pairs, regardless if their internal
+ * structure differs due to the order-of-operations of the key-value pair
+ * insertions.
  */
 struct cb_bst_header
 {
     size_t      total_size;
+    cb_hash_t   hash_value;
     cb_offset_t root_node_offset;
 };
 
@@ -270,6 +277,20 @@ cb_bst_node_is_black(const struct cb *cb,
 {
     struct cb_bst_node *node = cb_bst_node_at(cb, node_offset);
     return !node || node->color == CB_BST_BLACK;
+}
+
+
+static cb_hash_t
+cb_bst_node_hash(const struct cb          *cb,
+                 const struct cb_bst_node *node)
+{
+    cb_hash_state_t hash_state;
+
+    cb_hash_init(&hash_state);
+    cb_term_hash_continue(&hash_state, cb, &(node->key));
+    cb_term_hash_continue(&hash_state, cb, &(node->value));
+
+    return cb_hash_finalize(&hash_state);
 }
 
 
@@ -1181,6 +1202,7 @@ cb_bst_insert(struct cb            **cb,
                                *root_node;
     int                         cmp;
     ssize_t                     size_adjust = 0;
+    cb_hash_t                   hash_adjust = 0;
     int ret;
 
     cb_log_debug("insert of key %s, value %s",
@@ -1197,6 +1219,7 @@ cb_bst_insert(struct cb            **cb,
 
         header = cb_bst_header_at(*cb, s.new_header_offset);
         header->total_size       = sizeof(struct cb_bst_header);
+        header->hash_value       = 0;
         header->root_node_offset = CB_BST_SENTINEL;
     }
     else
@@ -1236,6 +1259,7 @@ cb_bst_insert(struct cb            **cb,
         header->total_size       += (sizeof(struct cb_bst_node)
                                     + cb_term_external_size(*cb, key)
                                     + cb_term_external_size(*cb, value));
+        header->hash_value       ^= cb_bst_node_hash(*cb, curr_node);
         header->root_node_offset =  s.curr_node_offset;
 
         *header_offset = s.new_header_offset;
@@ -1278,9 +1302,19 @@ entry:
         {
             /* The key already exists in this tree.  Update the value at key
                and go no further. */
-            size_adjust -= (ssize_t)cb_term_external_size(*cb, &(curr_node->value));
+
+            /* Reduce by the old size and remove the old hash. */
+            size_adjust -= (ssize_t)cb_term_external_size(*cb,
+                                                          &(curr_node->value));
+            hash_adjust ^= cb_bst_node_hash(*cb, curr_node);
+
             cb_term_assign(&(curr_node->value), value);
-            size_adjust += (ssize_t)cb_term_external_size(*cb, &(curr_node->value));
+
+            /* Increment by the new size and add the new hash. */
+            size_adjust += (ssize_t)cb_term_external_size(*cb,
+                                                          &(curr_node->value));
+            hash_adjust ^= cb_bst_node_hash(*cb, curr_node);
+
             goto done;
         }
         s.dir = (cmp == 1);
@@ -1374,6 +1408,7 @@ entry:
     size_adjust = (ssize_t)(sizeof(struct cb_bst_node)
                             + cb_term_external_size(*cb, &(curr_node->key))
                             + cb_term_external_size(*cb, &(curr_node->value)));
+    hash_adjust = cb_bst_node_hash(*cb, curr_node);
 
     if (cb_bst_node_is_red(*cb, s.parent_node_offset))
     {
@@ -1392,6 +1427,7 @@ done:
 
     header = cb_bst_header_at(*cb, s.new_header_offset);
     header->total_size       += size_adjust;
+    header->hash_value       ^= hash_adjust;
     header->root_node_offset =  s.new_root_node_offset;
 
     *header_offset = s.new_header_offset;
@@ -2015,6 +2051,7 @@ cb_bst_delete(struct cb            **cb,
                                *found_node;
     int                         cmp;
     size_t                      size_subtract = 0;
+    cb_hash_t                   hash_adjust = 0;
     int ret;
 
     cb_log_debug("delete of key %s", cb_term_to_str(cb, key));
@@ -2211,6 +2248,7 @@ descend:
     size_subtract = sizeof(struct cb_bst_node)
                     + cb_term_external_size(*cb, &(found_node->key))
                     + cb_term_external_size(*cb, &(found_node->value));
+    hash_adjust   = cb_bst_node_hash(*cb, found_node);
 
     cb_assert(s.parent_node_offset != CB_BST_SENTINEL);
     cb_assert(s.curr_node_offset == CB_BST_SENTINEL);
@@ -2256,6 +2294,7 @@ descend:
     header = cb_bst_header_at(*cb, s.new_header_offset);
     cb_assert(size_subtract < header->total_size);
     header->total_size       -= size_subtract;
+    header->hash_value       ^= hash_adjust;
     header->root_node_offset =  s.new_root_node_offset;
 
     /* Disallow header + empty BST. */
@@ -2303,6 +2342,33 @@ cb_bst_size(const struct cb *cb,
         return 0;
 
     return cb_bst_header_at(cb, header_offset)->total_size;
+}
+
+
+void
+cb_bst_hash_continue(cb_hash_state_t *hash_state,
+                     const struct cb *cb,
+                     cb_offset_t      header_offset)
+{
+    cb_hash_t hash_value = 0;
+
+    if (header_offset != CB_BST_SENTINEL)
+        hash_value = cb_bst_header_at(cb, header_offset)->hash_value;
+
+    cb_hash_continue(hash_state, &hash_value, sizeof(hash_value));
+}
+
+
+cb_hash_t
+cb_bst_hash(const struct cb *cb,
+            cb_offset_t      header_offset)
+{
+    cb_hash_state_t hash_state;
+
+    cb_hash_init(&hash_state);
+    cb_bst_hash_continue(&hash_state, cb, header_offset);
+
+    return cb_hash_finalize(&hash_state);
 }
 
 

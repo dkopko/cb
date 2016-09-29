@@ -886,6 +886,28 @@ cb_structmap_size(const struct cb *cb,
 }
 
 
+void
+cb_structmap_hash_continue(cb_hash_state_t *hash_state,
+                           const struct cb *cb,
+                           cb_offset_t      root_node_offset)
+{
+    (void)hash_state, (void)cb, (void)root_node_offset;
+    /* FIXME implement */
+}
+
+
+cb_hash_t
+cb_structmap_hash(const struct cb *cb,
+                  cb_offset_t      root_node_offset)
+{
+    cb_hash_state_t hash_state;
+
+    cb_hash_init(&hash_state);
+    cb_structmap_hash_continue(&hash_state, cb, root_node_offset);
+    return cb_hash_finalize(&hash_state);
+}
+
+
 int
 cb_structmap_render(cb_offset_t   *dest_offset,
                     struct cb    **cb,

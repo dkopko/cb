@@ -18,6 +18,7 @@
 #define _CB_BST_H_
 
 #include "cb.h"
+#include "cb_hash.h"
 #include "cb_term.h"
 
 
@@ -80,6 +81,15 @@ cb_bst_cmp(const struct cb *cb,
 
 size_t
 cb_bst_size(const struct cb *cb,
+            cb_offset_t      header_offset);
+
+void
+cb_bst_hash_continue(cb_hash_state_t *hash_state,
+                     const struct cb *cb,
+                     cb_offset_t      header_offset);
+
+cb_hash_t
+cb_bst_hash(const struct cb *cb,
             cb_offset_t      header_offset);
 
 int

@@ -18,6 +18,7 @@
 #define _CB_TERM_H_
 
 #include "cb.h"
+#include "cb_hash.h"
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -69,6 +70,21 @@ cb_term_cmp(const struct cb      *cb,
 size_t
 cb_term_external_size(const struct cb      *cb,
                       const struct cb_term *term);
+
+/*
+ * Accumulates the value of a term into an ongoing hashing operation.
+ */
+void
+cb_term_hash_continue(cb_hash_state_t      *hash_state,
+                      const struct cb      *cb,
+                      const struct cb_term *term);
+
+/*
+ * Returns a hash value for the value of the term.
+ */
+cb_hash_t
+cb_term_hash(const struct cb      *cb,
+             const struct cb_term *term);
 
 int
 cb_term_render(cb_offset_t           *dest_offset,

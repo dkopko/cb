@@ -199,6 +199,133 @@ main(int argc, char **argv)
         cb_assert(size5 == header_size + node_size + bst1_size);
     }
 
+    /* Test hash. */
+    {
+        cb_offset_t    bst1 = CB_BST_SENTINEL,
+                       bst2 = CB_BST_SENTINEL,
+                       bst3 = CB_BST_SENTINEL;
+        struct cb_term key1,
+                       key2,
+                       key3,
+                       value1,
+                       value2,
+                       value3;
+        cb_hash_t      hash1,
+                       hash2,
+                       hash3,
+                       hash4,
+                       hash5,
+                       hash6,
+                       hash7,
+                       hash8,
+                       hash9,
+                       hash10,
+                       hash11,
+                       hash12;
+
+        (void)bst2;
+
+        cb_term_set_u64(&key1, 111);
+        cb_term_set_u64(&key2, 222);
+        cb_term_set_u64(&key3, 333);
+        cb_term_set_u64(&value1, 1);
+        cb_term_set_u64(&value2, 2);
+        cb_term_set_u64(&value3, 3);
+
+        hash1 = cb_bst_hash(cb, bst1);
+        printf("hash1: %ju\n", (uintmax_t)hash1);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
+        cb_assert(ret == 0);
+        hash2 = cb_bst_hash(cb, bst1);
+        printf("hash2: %ju\n", (uintmax_t)hash2);
+        cb_assert(hash1 != hash2);
+
+        ret = cb_bst_delete(&cb, &bst1, 0, &key1);
+        cb_assert(ret == 0);
+        hash3 = cb_bst_hash(cb, bst1);
+        printf("hash3: %ju\n", (uintmax_t)hash3);
+        cb_assert(hash3 == hash1);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
+        cb_assert(ret == 0);
+        hash4 = cb_bst_hash(cb, bst1);
+        printf("hash4: %ju\n", (uintmax_t)hash4);
+        cb_assert(hash4 == hash2);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
+        cb_assert(ret == 0);
+        hash5 = cb_bst_hash(cb, bst1);
+        printf("hash5: %ju\n", (uintmax_t)hash5);
+        cb_assert(hash5 == hash2);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value2);
+        cb_assert(ret == 0);
+        hash6 = cb_bst_hash(cb, bst1);
+        printf("hash6: %ju\n", (uintmax_t)hash6);
+        cb_assert(hash6 != hash5);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value3);
+        cb_assert(ret == 0);
+        hash7 = cb_bst_hash(cb, bst1);
+        printf("hash7: %ju\n", (uintmax_t)hash7);
+        cb_assert(hash7 != hash6);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value2);
+        cb_assert(ret == 0);
+        hash8 = cb_bst_hash(cb, bst1);
+        printf("hash8: %ju\n", (uintmax_t)hash8);
+        cb_assert(hash8 != hash7);
+        cb_assert(hash8 == hash6);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value1);
+        cb_assert(ret == 0);
+        ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value2);
+        cb_assert(ret == 0);
+        hash9 = cb_bst_hash(cb, bst1);
+        printf("hash9: %ju\n", (uintmax_t)hash9);
+        cb_assert(hash9 != hash8);
+
+        ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value2);
+        cb_assert(ret == 0);
+        ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
+        cb_assert(ret == 0);
+        hash10 = cb_bst_hash(cb, bst1);
+        printf("hash10: %ju\n", (uintmax_t)hash10);
+        cb_assert(hash10 == hash8);
+
+
+        for (int i = 0; i < 10; ++i)
+        {
+            struct cb_term key, value;
+
+            cb_term_set_u64(&key, 100 * i);
+            cb_term_set_u64(&value, i);
+            ret = cb_bst_insert(&cb, &bst2, 0, &key, &value);
+            cb_assert(ret == 0);
+        }
+        for (int i = 10; i > 0; --i)
+        {
+            struct cb_term key, value;
+
+            cb_term_set_u64(&key, 100 * (i - 1));
+            cb_term_set_u64(&value, i - 1);
+            ret = cb_bst_insert(&cb, &bst3, 0, &key, &value);
+            cb_assert(ret == 0);
+        }
+        const char *str1, *str2;
+        str1 = cb_bst_to_str(&cb, bst2);
+        str2 = cb_bst_to_str(&cb, bst3);
+        printf("bst2: \"%s\"\n", str1);
+        printf("bst3: \"%s\"\n", str2);
+        cb_assert(strcmp(str1, str2) != 0); /* Trees differe structurally, but not by value */
+        hash11 = cb_bst_hash(cb, bst2);
+        printf("hash11: %ju\n", (uintmax_t)hash11);
+        hash12 = cb_bst_hash(cb, bst3);
+        printf("hash12: %ju\n", (uintmax_t)hash12);
+        cb_assert(hash11 == hash12);
+
+    }
 
     /* Test render. */
     {
