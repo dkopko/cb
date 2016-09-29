@@ -162,13 +162,25 @@ cb_term_cmp(const struct cb      *cb,
             const struct cb_term *rhs);
 
 /*
+ * Returns the size of a term's linked data (in the case of BSTs, for example).
+ * Primitive terms such as u64s will return 0, as they have no external data.
+ */
+size_t
+cb_term_external_size(const struct cb      *cb,
+                      const struct cb_term *term);
+
+
+/*
  * Returns the overall size of the term and its linked data (in the case of
  * BSTs, for example), sufficient for allocating a region of memory in a
  * continuous buffer into which the term's data can be consolidated.
  */
-size_t
+CB_INLINE size_t
 cb_term_size(const struct cb      *cb,
-             const struct cb_term *term);
+             const struct cb_term *term)
+{
+    return sizeof(struct cb_term) + cb_term_external_size(cb, term);
+}
 
 
 int

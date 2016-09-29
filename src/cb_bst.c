@@ -1234,8 +1234,8 @@ cb_bst_insert(struct cb            **cb,
 
         header = cb_bst_header_at(*cb, s.new_header_offset);
         header->total_size       += (sizeof(struct cb_bst_node)
-                                    + cb_term_size(*cb, key)
-                                    + cb_term_size(*cb, value));
+                                    + cb_term_external_size(*cb, key)
+                                    + cb_term_external_size(*cb, value));
         header->root_node_offset =  s.curr_node_offset;
 
         *header_offset = s.new_header_offset;
@@ -1278,9 +1278,9 @@ entry:
         {
             /* The key already exists in this tree.  Update the value at key
                and go no further. */
-            size_adjust -= (ssize_t)cb_term_size(*cb, &(curr_node->value));
+            size_adjust -= (ssize_t)cb_term_external_size(*cb, &(curr_node->value));
             cb_term_assign(&(curr_node->value), value);
-            size_adjust += (ssize_t)cb_term_size(*cb, &(curr_node->value));
+            size_adjust += (ssize_t)cb_term_external_size(*cb, &(curr_node->value));
             goto done;
         }
         s.dir = (cmp == 1);
@@ -1372,8 +1372,8 @@ entry:
     cb_term_assign(&(curr_node->value), value);
 
     size_adjust = (ssize_t)(sizeof(struct cb_bst_node)
-                            + cb_term_size(*cb, &(curr_node->key))
-                            + cb_term_size(*cb, &(curr_node->value)));
+                            + cb_term_external_size(*cb, &(curr_node->key))
+                            + cb_term_external_size(*cb, &(curr_node->value)));
 
     if (cb_bst_node_is_red(*cb, s.parent_node_offset))
     {
@@ -2209,8 +2209,8 @@ descend:
     }
     found_node = cb_bst_node_at(*cb, found_node_offset);
     size_subtract = sizeof(struct cb_bst_node)
-                    + cb_term_size(*cb, &(found_node->key))
-                    + cb_term_size(*cb, &(found_node->value));
+                    + cb_term_external_size(*cb, &(found_node->key))
+                    + cb_term_external_size(*cb, &(found_node->value));
 
     cb_assert(s.parent_node_offset != CB_BST_SENTINEL);
     cb_assert(s.curr_node_offset == CB_BST_SENTINEL);
