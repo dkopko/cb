@@ -57,6 +57,78 @@ struct cb_term
 };
 
 
+int
+cb_term_cmp(const struct cb      *cb,
+            const struct cb_term *lhs,
+            const struct cb_term *rhs);
+
+/*
+ * Returns the size of a term's linked data (in the case of BSTs, for example).
+ * Primitive terms such as u64s will return 0, as they have no external data.
+ */
+size_t
+cb_term_external_size(const struct cb      *cb,
+                      const struct cb_term *term);
+
+int
+cb_term_render(cb_offset_t           *dest_offset,
+               struct cb            **cb,
+               const struct cb_term  *term,
+               unsigned int           flags);
+
+const char*
+cb_term_to_str(struct cb            **cb,
+               const struct cb_term  *term);
+
+
+/*
+ * Assigns the term 'rhs' to the term 'lhs'.  This variant is suitable for cases
+ * where 'lhs' and 'rhs' are not known to be distinct.
+ */
+CB_INLINE void
+cb_term_assign(struct cb_term *lhs, const struct cb_term *rhs)
+{
+    /*
+     * Terms have value semantics, even when they represent a graph structure
+     * (BSTs, for example).  This is ensured by the persistent nature
+     * of such graph structures.  Because of this, a simple memmove will
+     * suffice.
+     */
+    memmove(lhs, rhs, sizeof(*rhs));
+}
+
+
+/*
+ * Assigns the term 'rhs' to the term 'lhs'.  This variant is suitable for cases
+ * where 'lhs' and 'rhs' are known to be distinct.
+ */
+CB_INLINE void
+cb_term_assign_restrict(struct cb_term *__restrict__       lhs,
+                        const struct cb_term *__restrict__ rhs)
+{
+    /*
+     * Terms have value semantics, even when they represent a graph structure
+     * (BSTs, for example).  This is ensured by the persistent nature
+     * of such graph structures.  Because of this, a simple memcpy() will
+     * suffice.
+     */
+    memcpy(lhs, rhs, sizeof(*rhs));
+}
+
+
+/*
+ * Returns the overall size of the term and its linked data (in the case of
+ * BSTs, for example), sufficient for allocating a region of memory in a
+ * continuous buffer into which the term's data can be consolidated.
+ */
+CB_INLINE size_t
+cb_term_size(const struct cb      *cb,
+             const struct cb_term *term)
+{
+    return sizeof(struct cb_term) + cb_term_external_size(cb, term);
+}
+
+
 CB_INLINE void
 cb_term_set_u64(struct cb_term *term, uint64_t val)
 {
@@ -120,77 +192,5 @@ cb_term_get_structmap(struct cb_term *term)
     return term->value.structmap;
 }
 
-
-/*
- * Assigns the term 'rhs' to the term 'lhs'.  This variant is suitable for cases
- * where 'lhs' and 'rhs' are not known to be distinct.
- */
-CB_INLINE void
-cb_term_assign(struct cb_term *lhs, const struct cb_term *rhs)
-{
-    /*
-     * Terms have value semantics, even when they represent a graph structure
-     * (BSTs, for example).  This is ensured by the persistent nature
-     * of such graph structures.  Because of this, a simple memmove will
-     * suffice.
-     */
-    memmove(lhs, rhs, sizeof(*rhs));
-}
-
-
-/*
- * Assigns the term 'rhs' to the term 'lhs'.  This variant is suitable for cases
- * where 'lhs' and 'rhs' are known to be distinct.
- */
-CB_INLINE void
-cb_term_assign_restrict(struct cb_term *__restrict__       lhs,
-                        const struct cb_term *__restrict__ rhs)
-{
-    /*
-     * Terms have value semantics, even when they represent a graph structure
-     * (BSTs, for example).  This is ensured by the persistent nature
-     * of such graph structures.  Because of this, a simple memcpy() will
-     * suffice.
-     */
-    memcpy(lhs, rhs, sizeof(*rhs));
-}
-
-
-int
-cb_term_cmp(const struct cb      *cb,
-            const struct cb_term *lhs,
-            const struct cb_term *rhs);
-
-/*
- * Returns the size of a term's linked data (in the case of BSTs, for example).
- * Primitive terms such as u64s will return 0, as they have no external data.
- */
-size_t
-cb_term_external_size(const struct cb      *cb,
-                      const struct cb_term *term);
-
-
-/*
- * Returns the overall size of the term and its linked data (in the case of
- * BSTs, for example), sufficient for allocating a region of memory in a
- * continuous buffer into which the term's data can be consolidated.
- */
-CB_INLINE size_t
-cb_term_size(const struct cb      *cb,
-             const struct cb_term *term)
-{
-    return sizeof(struct cb_term) + cb_term_external_size(cb, term);
-}
-
-
-int
-cb_term_render(cb_offset_t           *dest_offset,
-               struct cb            **cb,
-               const struct cb_term  *term,
-               unsigned int           flags);
-
-const char*
-cb_term_to_str(struct cb            **cb,
-               const struct cb_term  *term);
 
 #endif /* ! defined _CB_TERM_H_*/
