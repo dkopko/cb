@@ -222,6 +222,8 @@ main(int argc, char **argv)
                        hash10,
                        hash11,
                        hash12;
+        const char    *str1,
+                      *str2;
 
         (void)bst2;
 
@@ -232,45 +234,53 @@ main(int argc, char **argv)
         cb_term_set_u64(&value2, 2);
         cb_term_set_u64(&value3, 3);
 
+        /* Empty hash. */
         hash1 = cb_bst_hash(cb, bst1);
         printf("hash1: %ju\n", (uintmax_t)hash1);
 
+        /* First element hash. */
         ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
         cb_assert(ret == 0);
         hash2 = cb_bst_hash(cb, bst1);
         printf("hash2: %ju\n", (uintmax_t)hash2);
         cb_assert(hash1 != hash2);
 
+        /* Return to empty hash. */
         ret = cb_bst_delete(&cb, &bst1, 0, &key1);
         cb_assert(ret == 0);
         hash3 = cb_bst_hash(cb, bst1);
         printf("hash3: %ju\n", (uintmax_t)hash3);
         cb_assert(hash3 == hash1);
 
+        /* Return to first element hash. */
         ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
         cb_assert(ret == 0);
         hash4 = cb_bst_hash(cb, bst1);
         printf("hash4: %ju\n", (uintmax_t)hash4);
         cb_assert(hash4 == hash2);
 
+        /* Overwrite with same data leads to same hash. */
         ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
         cb_assert(ret == 0);
         hash5 = cb_bst_hash(cb, bst1);
         printf("hash5: %ju\n", (uintmax_t)hash5);
         cb_assert(hash5 == hash2);
 
+        /* Additional data leads to different hash. */
         ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value2);
         cb_assert(ret == 0);
         hash6 = cb_bst_hash(cb, bst1);
         printf("hash6: %ju\n", (uintmax_t)hash6);
         cb_assert(hash6 != hash5);
 
+        /* Adjusting a value for a key leads to different hash. */
         ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value3);
         cb_assert(ret == 0);
         hash7 = cb_bst_hash(cb, bst1);
         printf("hash7: %ju\n", (uintmax_t)hash7);
         cb_assert(hash7 != hash6);
 
+        /* Restoring a value for a key restores original hash. */
         ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value2);
         cb_assert(ret == 0);
         hash8 = cb_bst_hash(cb, bst1);
@@ -278,6 +288,10 @@ main(int argc, char **argv)
         cb_assert(hash8 != hash7);
         cb_assert(hash8 == hash6);
 
+        /*
+         * Transposition of values must lead to different hash.
+         * (Set of all keys same, set of all values same.)
+         */
         ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value1);
         cb_assert(ret == 0);
         ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value2);
@@ -286,6 +300,7 @@ main(int argc, char **argv)
         printf("hash9: %ju\n", (uintmax_t)hash9);
         cb_assert(hash9 != hash8);
 
+        /* Undoing transposition restores original hash. */
         ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value2);
         cb_assert(ret == 0);
         ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
@@ -294,7 +309,7 @@ main(int argc, char **argv)
         printf("hash10: %ju\n", (uintmax_t)hash10);
         cb_assert(hash10 == hash8);
 
-
+        /* Structural differences do not affect hash, which is value-based. */
         for (int i = 0; i < 10; ++i)
         {
             struct cb_term key, value;
@@ -313,18 +328,16 @@ main(int argc, char **argv)
             ret = cb_bst_insert(&cb, &bst3, 0, &key, &value);
             cb_assert(ret == 0);
         }
-        const char *str1, *str2;
         str1 = cb_bst_to_str(&cb, bst2);
         str2 = cb_bst_to_str(&cb, bst3);
         printf("bst2: \"%s\"\n", str1);
         printf("bst3: \"%s\"\n", str2);
-        cb_assert(strcmp(str1, str2) != 0); /* Trees differe structurally, but not by value */
+        cb_assert(strcmp(str1, str2) != 0); /* i.e. BSTs differ structurally. */
         hash11 = cb_bst_hash(cb, bst2);
         printf("hash11: %ju\n", (uintmax_t)hash11);
         hash12 = cb_bst_hash(cb, bst3);
         printf("hash12: %ju\n", (uintmax_t)hash12);
         cb_assert(hash11 == hash12);
-
     }
 
     /* Test render. */
