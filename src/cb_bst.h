@@ -104,6 +104,34 @@ cb_bst_to_str(struct cb   **cb,
 
 
 /*
+ * This header structure is used for O(1) maintenance and determinations of
+ * cb_bst_size(). The 'total_size' field represents the sum total of the size of
+ * this header, the internal nodes, and the external structures rooted at terms
+ * within keys or values of this BST.  The 'hash_value' field represents a hash
+ * code for all the contained keys and values, but not the internal structure of
+ * the BST.  This is because we want two BSTs to have the same hash code if they
+ * contain the exact same set of key-value pairs, regardless if their internal
+ * structure differs due to the order-of-operations of the key-value pair
+ * insertions.
+ */
+struct cb_bst_header
+{
+    size_t      total_size;
+    cb_hash_t   hash_value;
+    cb_offset_t root_node_offset;
+};
+
+
+struct cb_bst_node
+{
+    struct cb_term key;
+    struct cb_term value;
+    unsigned int   color;
+    cb_offset_t    child[2];  /* 0: left, 1: right */
+};
+
+
+/*
  * An iterator for BSTs.  This is a "fat"-style iterator because due to the
  * persistent nature of the BST data structure it is not possible to use parent
  * pointers.
@@ -115,28 +143,122 @@ struct cb_bst_iter
 };
 
 
-void
-cb_bst_get_iter_start(const struct cb    *cb,
-                      cb_offset_t         header_offset,
-                      struct cb_bst_iter *iter);
+CB_INLINE struct cb_bst_header*
+cb_bst_header_at(const struct cb *cb,
+                 cb_offset_t      header_offset)
+{
+    if (header_offset == CB_BST_SENTINEL)
+        return NULL;
 
-void
+    return (struct cb_bst_header*)cb_at(cb, header_offset);
+}
+
+
+CB_INLINE struct cb_bst_node*
+cb_bst_node_at(const struct cb *cb,
+               cb_offset_t      node_offset)
+{
+    if (node_offset == CB_BST_SENTINEL)
+        return NULL;
+
+    return (struct cb_bst_node*)cb_at(cb, node_offset);
+}
+
+
+CB_INLINE void
 cb_bst_get_iter_end(const struct cb    *cb,
                     cb_offset_t         header_offset,
-                    struct cb_bst_iter *iter);
+                    struct cb_bst_iter *iter)
+{
+    (void)cb, (void)header_offset;
+    iter->count = 0;
+}
 
-bool
+
+CB_INLINE void
+cb_bst_get_iter_start(const struct cb    *cb,
+                      cb_offset_t         header_offset,
+                      struct cb_bst_iter *iter)
+{
+    cb_offset_t curr_node_offset;
+
+    if (header_offset == CB_BST_SENTINEL)
+    {
+        cb_bst_get_iter_end(cb, header_offset, iter);
+        return;
+    }
+
+    curr_node_offset = cb_bst_header_at(cb, header_offset)->root_node_offset;
+    cb_assert(curr_node_offset != CB_BST_SENTINEL);
+
+    iter->count = 0;
+    while (curr_node_offset != CB_BST_SENTINEL)
+    {
+        iter->path_node_offset[iter->count] = curr_node_offset;
+        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
+        iter->count++;
+    }
+}
+
+
+CB_INLINE bool
 cb_bst_iter_eq(struct cb_bst_iter *lhs,
-               struct cb_bst_iter *rhs);
+               struct cb_bst_iter *rhs)
+{
+    if (lhs->count != rhs->count)
+        return false;
 
-void
+    for (uint8_t i = 0; i < lhs->count; ++i)
+        if (lhs->path_node_offset[i] != rhs->path_node_offset[i])
+            return false;
+
+    return true;
+}
+
+
+CB_INLINE void
 cb_bst_iter_next(const struct cb    *cb,
-                 struct cb_bst_iter *iter);
+                 struct cb_bst_iter *iter)
+{
+    cb_offset_t curr_node_offset;
 
-void
+    cb_assert(iter->count > 0);
+
+    curr_node_offset =
+        cb_bst_node_at(cb, iter->path_node_offset[iter->count - 1])->child[1];
+    iter->count--;
+    while (curr_node_offset != CB_BST_SENTINEL)
+    {
+        iter->path_node_offset[iter->count] = curr_node_offset;
+        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
+        iter->count++;
+    }
+}
+
+
+CB_INLINE void
 cb_bst_iter_deref(const struct cb          *cb,
                   const struct cb_bst_iter *iter,
                   struct cb_term           *key,
-                  struct cb_term           *value);
+                  struct cb_term           *value)
+{
+    struct cb_bst_node *curr_node;
+
+    curr_node = cb_bst_node_at(cb, iter->path_node_offset[iter->count - 1]);
+    cb_term_assign_restrict(key,   &(curr_node->key));
+    cb_term_assign_restrict(value, &(curr_node->value));
+}
+
+
+CB_INLINE int
+cb_bst_iter_visit(const struct cb          *cb,
+                  const struct cb_bst_iter *iter,
+                  cb_bst_traverse_func_t    func,
+                  void                     *closure)
+{
+    struct cb_bst_node *curr_node;
+    curr_node = cb_bst_node_at(cb, iter->path_node_offset[iter->count - 1]);
+    return func(&(curr_node->key), &(curr_node->value), closure);
+}
 
 #endif /* ! defined _CB_BST_H_*/

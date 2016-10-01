@@ -139,34 +139,6 @@ Garbage Collection
 */
 
 
-/*
- * This header structure is used for O(1) maintenance and determinations of
- * cb_bst_size(). The 'total_size' field represents the sum total of the size of
- * this header, the internal nodes, and the external structures rooted at terms
- * within keys or values of this BST.  The 'hash_value' field represents a hash
- * code for all the contained keys and values, but not the internal structure of
- * the BST.  This is because we want two BSTs to have the same hash code if they
- * contain the exact same set of key-value pairs, regardless if their internal
- * structure differs due to the order-of-operations of the key-value pair
- * insertions.
- */
-struct cb_bst_header
-{
-    size_t      total_size;
-    cb_hash_t   hash_value;
-    cb_offset_t root_node_offset;
-};
-
-
-struct cb_bst_node
-{
-    struct cb_term key;
-    struct cb_term value;
-    unsigned int   color;
-    cb_offset_t    child[2];  /* 0: left, 1: right */
-};
-
-
 struct cb_bst_mutate_state
 {
     cb_offset_t greatgrandparent_node_offset;
@@ -216,28 +188,6 @@ struct cb_bst_sequence_check_state
     bool             failed;
     bool             do_print;
 };
-
-
-CB_INLINE struct cb_bst_header*
-cb_bst_header_at(const struct cb *cb,
-                 cb_offset_t      header_offset)
-{
-    if (header_offset == CB_BST_SENTINEL)
-        return NULL;
-
-    return (struct cb_bst_header*)cb_at(cb, header_offset);
-}
-
-
-CB_INLINE struct cb_bst_node*
-cb_bst_node_at(const struct cb *cb,
-               cb_offset_t      node_offset)
-{
-    if (node_offset == CB_BST_SENTINEL)
-        return NULL;
-
-    return (struct cb_bst_node*)cb_at(cb, node_offset);
-}
 
 
 CB_INLINE bool
@@ -871,10 +821,7 @@ cb_bst_traverse(const struct cb        *cb,
     cb_bst_get_iter_end(cb, header_offset, &end);
     while (!cb_bst_iter_eq(&curr, &end))
     {
-        struct cb_term key, value;
-
-        cb_bst_iter_deref(cb, &curr, &key, &value);
-        ret = func(&key, &value, closure);
+        ret = cb_bst_iter_visit(cb, &curr, func, closure);
         if (ret != 0)
             return ret;
 
@@ -2462,90 +2409,3 @@ cb_bst_to_str(struct cb   **cb,
 
     return (const char*)cb_at(*cb, dest_offset);
 }
-
-
-void
-cb_bst_get_iter_start(const struct cb    *cb,
-                      cb_offset_t         header_offset,
-                      struct cb_bst_iter *iter)
-{
-    cb_offset_t curr_node_offset;
-
-    if (header_offset == CB_BST_SENTINEL)
-    {
-        cb_bst_get_iter_end(cb, header_offset, iter);
-        return;
-    }
-
-    curr_node_offset = cb_bst_header_at(cb, header_offset)->root_node_offset;
-    cb_assert(curr_node_offset != CB_BST_SENTINEL);
-
-    iter->count = 0;
-    while (curr_node_offset != CB_BST_SENTINEL)
-    {
-        iter->path_node_offset[iter->count] = curr_node_offset;
-        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
-        iter->count++;
-    }
-}
-
-
-void
-cb_bst_get_iter_end(const struct cb    *cb,
-                    cb_offset_t         header_offset,
-                    struct cb_bst_iter *iter)
-{
-    (void)cb, (void)header_offset;
-    iter->count = 0;
-}
-
-
-bool
-cb_bst_iter_eq(struct cb_bst_iter *lhs,
-               struct cb_bst_iter *rhs)
-{
-    if (lhs->count != rhs->count)
-        return false;
-
-    for (uint8_t i = 0; i < lhs->count; ++i)
-        if (lhs->path_node_offset[i] != rhs->path_node_offset[i])
-            return false;
-
-    return true;
-}
-
-
-void
-cb_bst_iter_next(const struct cb    *cb,
-                 struct cb_bst_iter *iter)
-{
-    cb_offset_t curr_node_offset;
-
-    cb_assert(iter->count > 0);
-
-    curr_node_offset =
-        cb_bst_node_at(cb, iter->path_node_offset[iter->count - 1])->child[1];
-    iter->count--;
-    while (curr_node_offset != CB_BST_SENTINEL)
-    {
-        iter->path_node_offset[iter->count] = curr_node_offset;
-        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
-        iter->count++;
-    }
-}
-
-
-void
-cb_bst_iter_deref(const struct cb          *cb,
-                  const struct cb_bst_iter *iter,
-                  struct cb_term           *key,
-                  struct cb_term           *value)
-{
-    struct cb_bst_node *curr_node;
-
-    curr_node = cb_bst_node_at(cb, iter->path_node_offset[iter->count - 1]);
-    cb_term_assign(key,   &(curr_node->key));
-    cb_term_assign(value, &(curr_node->value));
-}
-
-
