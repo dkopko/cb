@@ -75,9 +75,49 @@ cb_term_external_size(const struct cb      *cb,
  * Accumulates the value of a term into an ongoing hashing operation.
  */
 void
+cb_bst_hash_continue(cb_hash_state_t *hash_state,
+                     const struct cb *cb,
+                     cb_offset_t      header_offset);
+void
+cb_structmap_hash_continue(cb_hash_state_t *hash_state,
+                           const struct cb *cb,
+                           cb_offset_t      root_node_offset);
+
+CB_INLINE void
 cb_term_hash_continue(cb_hash_state_t      *hash_state,
                       const struct cb      *cb,
-                      const struct cb_term *term);
+                      const struct cb_term *term)
+{
+    cb_hash_continue(hash_state, &(term->tag), sizeof(term->tag));
+
+    switch (term->tag)
+    {
+        case CB_TERM_U64:
+            cb_hash_continue(hash_state,
+                             &(term->value.u64),
+                             sizeof(term->value.u64));
+            break;
+
+        case CB_TERM_DBL:
+            cb_hash_continue(hash_state,
+                             &(term->value.dbl),
+                             sizeof(term->value.dbl));
+            break;
+
+        case CB_TERM_BST:
+            cb_bst_hash_continue(hash_state, cb, term->value.bst);
+            break;
+
+        case CB_TERM_STRUCTMAP:
+            cb_structmap_hash_continue(hash_state, cb, term->value.structmap);
+            break;
+
+        default:
+            break;
+    }
+}
+
+
 
 /*
  * Returns a hash value for the value of the term.
