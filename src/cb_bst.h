@@ -103,13 +103,15 @@ cb_bst_to_str(struct cb   **cb,
               cb_offset_t   header_offset);
 
 
+/*
+ * An iterator for BSTs.  This is a "fat"-style iterator because due to the
+ * persistent nature of the BST data structure it is not possible to use parent
+ * pointers.
+ */
 struct cb_bst_iter
 {
-    uint8_t count;
-    struct
-    {
-        cb_offset_t         offset;
-    }       finger[64];
+    uint8_t      count;
+    cb_offset_t  path_node_offset[64];
 };
 
 
