@@ -671,12 +671,9 @@ cb_bst_find_path(struct cb_bst_iter   *iter,
 
     while ((curr_node = cb_bst_node_at(cb, curr_offset)) != NULL)
     {
+        iter->finger[iter->count].offset = curr_offset;
 
         cmp = cb_term_cmp(cb, key, &(curr_node->key));
-
-        iter->finger[iter->count].offset = curr_offset;
-        iter->finger[iter->count].cmp    = cmp;
-
         if (cmp == 0)
             return 0; /* FOUND */
 
