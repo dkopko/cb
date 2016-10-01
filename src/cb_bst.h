@@ -127,6 +127,7 @@ struct cb_bst_node
     struct cb_term key;
     struct cb_term value;
     unsigned int   color;
+    cb_hash_t      hash_value;
     cb_offset_t    child[2];  /* 0: left, 1: right */
 };
 

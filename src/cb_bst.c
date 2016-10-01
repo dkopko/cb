@@ -1164,17 +1164,18 @@ cb_bst_insert(struct cb            **cb,
             goto fail;
 
         curr_node = cb_bst_node_at(*cb, s.curr_node_offset);
-        curr_node->color    = CB_BST_BLACK;
-        curr_node->child[0] = CB_BST_SENTINEL;
-        curr_node->child[1] = CB_BST_SENTINEL;
+        curr_node->color      = CB_BST_BLACK;
+        curr_node->child[0]   = CB_BST_SENTINEL;
+        curr_node->child[1]   = CB_BST_SENTINEL;
         cb_term_assign(&(curr_node->key), key);
         cb_term_assign(&(curr_node->value), value);
+        curr_node->hash_value = cb_bst_node_hash(*cb, curr_node);
 
         header = cb_bst_header_at(*cb, s.new_header_offset);
         header->total_size       += (sizeof(struct cb_bst_node)
                                     + cb_term_external_size(*cb, key)
                                     + cb_term_external_size(*cb, value));
-        header->hash_value       ^= cb_bst_node_hash(*cb, curr_node);
+        header->hash_value       ^= curr_node->hash_value;
         header->root_node_offset =  s.curr_node_offset;
 
         *header_offset = s.new_header_offset;
@@ -1221,14 +1222,15 @@ entry:
             /* Reduce by the old size and remove the old hash. */
             size_adjust -= (ssize_t)cb_term_external_size(*cb,
                                                           &(curr_node->value));
-            hash_adjust ^= cb_bst_node_hash(*cb, curr_node);
+            hash_adjust ^= curr_node->hash_value;
 
             cb_term_assign(&(curr_node->value), value);
+            curr_node->hash_value = cb_bst_node_hash(*cb, curr_node);
 
             /* Increment by the new size and add the new hash. */
             size_adjust += (ssize_t)cb_term_external_size(*cb,
                                                           &(curr_node->value));
-            hash_adjust ^= cb_bst_node_hash(*cb, curr_node);
+            hash_adjust ^= curr_node->hash_value;
 
             goto done;
         }
@@ -1319,11 +1321,12 @@ entry:
     curr_node->child[1] = CB_BST_SENTINEL;
     cb_term_assign(&(curr_node->key), key);
     cb_term_assign(&(curr_node->value), value);
+    curr_node->hash_value = cb_bst_node_hash(*cb, curr_node);
 
     size_adjust = (ssize_t)(sizeof(struct cb_bst_node)
                             + cb_term_external_size(*cb, &(curr_node->key))
                             + cb_term_external_size(*cb, &(curr_node->value)));
-    hash_adjust = cb_bst_node_hash(*cb, curr_node);
+    hash_adjust = curr_node->hash_value;
 
     if (cb_bst_node_is_red(*cb, s.parent_node_offset))
     {
@@ -2163,7 +2166,7 @@ descend:
     size_subtract = sizeof(struct cb_bst_node)
                     + cb_term_external_size(*cb, &(found_node->key))
                     + cb_term_external_size(*cb, &(found_node->value));
-    hash_adjust   = cb_bst_node_hash(*cb, found_node);
+    hash_adjust   = found_node->hash_value;
 
     cb_assert(s.parent_node_offset != CB_BST_SENTINEL);
     cb_assert(s.curr_node_offset == CB_BST_SENTINEL);
