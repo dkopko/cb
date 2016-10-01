@@ -109,7 +109,6 @@ struct cb_bst_iter
     struct
     {
         cb_offset_t         offset;
-        struct cb_bst_node *node;
         int                 cmp;
     }       finger[64];
 };

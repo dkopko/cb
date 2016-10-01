@@ -675,7 +675,6 @@ cb_bst_find_path(struct cb_bst_iter   *iter,
         cmp = cb_term_cmp(cb, key, &(curr_node->key));
 
         iter->finger[iter->count].offset = curr_offset;
-        iter->finger[iter->count].node   = curr_node;
         iter->finger[iter->count].cmp    = cmp;
 
         if (cmp == 0)
@@ -753,7 +752,7 @@ cb_bst_lookup(const struct cb      *cb,
     if (ret != 0)
         goto fail;
 
-    cb_term_assign(value, &(iter.finger[iter.count].node->value));
+    cb_term_assign(value, &(cb_bst_node_at(cb, iter.finger[iter.count].offset)->value));
 
 fail:
     /* See NOTE above. */
