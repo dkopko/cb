@@ -102,4 +102,41 @@ const char*
 cb_bst_to_str(struct cb   **cb,
               cb_offset_t   header_offset);
 
+
+struct cb_bst_iter
+{
+    uint8_t count;
+    struct
+    {
+        cb_offset_t         offset;
+        struct cb_bst_node *node;
+        int                 cmp;
+    }       finger[64];
+};
+
+
+void
+cb_bst_get_iter_start(const struct cb    *cb,
+                      cb_offset_t         header_offset,
+                      struct cb_bst_iter *iter);
+
+void
+cb_bst_get_iter_end(const struct cb    *cb,
+                    cb_offset_t         header_offset,
+                    struct cb_bst_iter *iter);
+
+bool
+cb_bst_iter_eq(struct cb_bst_iter *lhs,
+               struct cb_bst_iter *rhs);
+
+void
+cb_bst_iter_next(const struct cb    *cb,
+                 struct cb_bst_iter *iter);
+
+void
+cb_bst_iter_deref(const struct cb          *cb,
+                  const struct cb_bst_iter *iter,
+                  struct cb_term           *key,
+                  struct cb_term           *value);
+
 #endif /* ! defined _CB_BST_H_*/

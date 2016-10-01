@@ -167,18 +167,6 @@ struct cb_bst_node
 };
 
 
-struct cb_bst_iter
-{
-    uint8_t count;
-    struct
-    {
-        cb_offset_t         offset;
-        struct cb_bst_node *node;
-        int                 cmp;
-    }       finger[64];
-};
-
-
 struct cb_bst_mutate_state
 {
     cb_offset_t greatgrandparent_node_offset;
@@ -869,96 +857,6 @@ cb_bst_select_modifiable_node(struct cb          **cb,
     *node_offset = new_node_offset;
 
     return 0;
-}
-
-
-static void
-cb_bst_get_iter_end(const struct cb    *cb,
-                    cb_offset_t         header_offset,
-                    struct cb_bst_iter *iter)
-{
-    (void)cb, (void)header_offset;
-    iter->count = 0;
-}
-
-
-static void
-cb_bst_get_iter_start(const struct cb    *cb,
-                      cb_offset_t         header_offset,
-                      struct cb_bst_iter *iter)
-{
-    cb_offset_t curr_node_offset;
-
-    if (header_offset == CB_BST_SENTINEL)
-    {
-        cb_bst_get_iter_end(cb, header_offset, iter);
-        return;
-    }
-
-    curr_node_offset = cb_bst_header_at(cb, header_offset)->root_node_offset;
-    cb_assert(curr_node_offset != CB_BST_SENTINEL);
-
-    iter->count = 0;
-    while (curr_node_offset != CB_BST_SENTINEL)
-    {
-        iter->finger[iter->count].offset = curr_node_offset;
-        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
-        iter->count++;
-    }
-}
-
-
-static bool
-cb_bst_iter_eq(struct cb_bst_iter *lhs,
-               struct cb_bst_iter *rhs)
-{
-    /*
-     * FIXME : Note this does not take into account the node and cmp fields,
-     * which should ideally be removed.
-     */
-
-    if (lhs->count != rhs->count)
-        return false;
-
-    for (uint8_t i = 0; i < lhs->count; ++i)
-        if (lhs->finger[i].offset != rhs->finger[i].offset)
-            return false;
-
-    return true;
-}
-
-
-static void
-cb_bst_iter_deref(const struct cb          *cb,
-                  const struct cb_bst_iter *iter,
-                  struct cb_term           *key,
-                  struct cb_term           *value)
-{
-    struct cb_bst_node *curr_node;
-
-    curr_node = cb_bst_node_at(cb, iter->finger[iter->count - 1].offset);
-    cb_term_assign(key,   &(curr_node->key));
-    cb_term_assign(value, &(curr_node->value));
-}
-
-
-static void
-cb_bst_iter_next(const struct cb    *cb,
-                 struct cb_bst_iter *iter)
-{
-    cb_offset_t curr_node_offset;
-
-    cb_assert(iter->count > 0);
-
-    curr_node_offset =
-        cb_bst_node_at(cb, iter->finger[iter->count - 1].offset)->child[1];
-    iter->count--;
-    while (curr_node_offset != CB_BST_SENTINEL)
-    {
-        iter->finger[iter->count].offset = curr_node_offset;
-        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
-        iter->count++;
-    }
 }
 
 
@@ -2566,3 +2464,95 @@ cb_bst_to_str(struct cb   **cb,
 
     return (const char*)cb_at(*cb, dest_offset);
 }
+
+
+void
+cb_bst_get_iter_start(const struct cb    *cb,
+                      cb_offset_t         header_offset,
+                      struct cb_bst_iter *iter)
+{
+    cb_offset_t curr_node_offset;
+
+    if (header_offset == CB_BST_SENTINEL)
+    {
+        cb_bst_get_iter_end(cb, header_offset, iter);
+        return;
+    }
+
+    curr_node_offset = cb_bst_header_at(cb, header_offset)->root_node_offset;
+    cb_assert(curr_node_offset != CB_BST_SENTINEL);
+
+    iter->count = 0;
+    while (curr_node_offset != CB_BST_SENTINEL)
+    {
+        iter->finger[iter->count].offset = curr_node_offset;
+        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
+        iter->count++;
+    }
+}
+
+
+void
+cb_bst_get_iter_end(const struct cb    *cb,
+                    cb_offset_t         header_offset,
+                    struct cb_bst_iter *iter)
+{
+    (void)cb, (void)header_offset;
+    iter->count = 0;
+}
+
+
+bool
+cb_bst_iter_eq(struct cb_bst_iter *lhs,
+               struct cb_bst_iter *rhs)
+{
+    /*
+     * FIXME : Note this does not take into account the node and cmp fields,
+     * which should ideally be removed.
+     */
+
+    if (lhs->count != rhs->count)
+        return false;
+
+    for (uint8_t i = 0; i < lhs->count; ++i)
+        if (lhs->finger[i].offset != rhs->finger[i].offset)
+            return false;
+
+    return true;
+}
+
+
+void
+cb_bst_iter_next(const struct cb    *cb,
+                 struct cb_bst_iter *iter)
+{
+    cb_offset_t curr_node_offset;
+
+    cb_assert(iter->count > 0);
+
+    curr_node_offset =
+        cb_bst_node_at(cb, iter->finger[iter->count - 1].offset)->child[1];
+    iter->count--;
+    while (curr_node_offset != CB_BST_SENTINEL)
+    {
+        iter->finger[iter->count].offset = curr_node_offset;
+        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
+        iter->count++;
+    }
+}
+
+
+void
+cb_bst_iter_deref(const struct cb          *cb,
+                  const struct cb_bst_iter *iter,
+                  struct cb_term           *key,
+                  struct cb_term           *value)
+{
+    struct cb_bst_node *curr_node;
+
+    curr_node = cb_bst_node_at(cb, iter->finger[iter->count - 1].offset);
+    cb_term_assign(key,   &(curr_node->key));
+    cb_term_assign(value, &(curr_node->value));
+}
+
+
