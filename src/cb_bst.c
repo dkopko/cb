@@ -169,13 +169,13 @@ struct cb_bst_node
 
 struct cb_bst_iter
 {
+    uint8_t count;
     struct
     {
         cb_offset_t         offset;
         struct cb_bst_node *node;
         int                 cmp;
-    }           finger[64];
-    uint8_t     depth;
+    }       finger[64];
 };
 
 
@@ -663,8 +663,8 @@ cb_bst_node_alloc(struct cb   **cb,
 
 /*
  *  Returns 0 if found or -1 if not found.
- *  If found, iter->finger[iter->depth] will point to the node containing key.
- *  If not found, iter->finger[iter->depth] will point to the parent node for
+ *  If found, iter->finger[iter->count] will point to the node containing key.
+ *  If not found, iter->finger[iter->count] will point to the parent node for
  *     which a node containing key may be inserted.
  */
 static int
@@ -677,7 +677,7 @@ cb_bst_find_path(struct cb_bst_iter   *iter,
     struct cb_bst_node *curr_node;
     int                 cmp;
 
-    iter->depth = 0;
+    iter->count = 0;
 
     curr_offset = root_node_offset;
 
@@ -686,16 +686,16 @@ cb_bst_find_path(struct cb_bst_iter   *iter,
 
         cmp = cb_term_cmp(cb, key, &(curr_node->key));
 
-        iter->finger[iter->depth].offset = curr_offset;
-        iter->finger[iter->depth].node   = curr_node;
-        iter->finger[iter->depth].cmp    = cmp;
+        iter->finger[iter->count].offset = curr_offset;
+        iter->finger[iter->count].node   = curr_node;
+        iter->finger[iter->count].cmp    = cmp;
 
         if (cmp == 0)
             return 0; /* FOUND */
 
         cb_assert(cmp == -1 || cmp == 1);
         curr_offset = (cmp == -1 ? curr_node->child[0] : curr_node->child[1]);
-        iter->depth++;
+        iter->count++;
     }
 
     return -1; /* NOT FOUND */
@@ -765,7 +765,7 @@ cb_bst_lookup(const struct cb      *cb,
     if (ret != 0)
         goto fail;
 
-    cb_term_assign(value, &(iter.finger[iter.depth].node->value));
+    cb_term_assign(value, &(iter.finger[iter.count].node->value));
 
 fail:
     /* See NOTE above. */
@@ -872,46 +872,118 @@ cb_bst_select_modifiable_node(struct cb          **cb,
 }
 
 
+static void
+cb_bst_get_iter_end(const struct cb    *cb,
+                    cb_offset_t         header_offset,
+                    struct cb_bst_iter *iter)
+{
+    (void)cb, (void)header_offset;
+    iter->count = 0;
+}
+
+
+static void
+cb_bst_get_iter_start(const struct cb    *cb,
+                      cb_offset_t         header_offset,
+                      struct cb_bst_iter *iter)
+{
+    cb_offset_t curr_node_offset;
+
+    if (header_offset == CB_BST_SENTINEL)
+    {
+        cb_bst_get_iter_end(cb, header_offset, iter);
+        return;
+    }
+
+    curr_node_offset = cb_bst_header_at(cb, header_offset)->root_node_offset;
+    cb_assert(curr_node_offset != CB_BST_SENTINEL);
+
+    iter->count = 0;
+    while (curr_node_offset != CB_BST_SENTINEL)
+    {
+        iter->finger[iter->count].offset = curr_node_offset;
+        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
+        iter->count++;
+    }
+}
+
+
+static bool
+cb_bst_iter_eq(struct cb_bst_iter *lhs,
+               struct cb_bst_iter *rhs)
+{
+    /*
+     * FIXME : Note this does not take into account the node and cmp fields,
+     * which should ideally be removed.
+     */
+
+    if (lhs->count != rhs->count)
+        return false;
+
+    for (uint8_t i = 0; i < lhs->count; ++i)
+        if (lhs->finger[i].offset != rhs->finger[i].offset)
+            return false;
+
+    return true;
+}
+
+
+static void
+cb_bst_iter_deref(const struct cb          *cb,
+                  const struct cb_bst_iter *iter,
+                  struct cb_term           *key,
+                  struct cb_term           *value)
+{
+    struct cb_bst_node *curr_node;
+
+    curr_node = cb_bst_node_at(cb, iter->finger[iter->count - 1].offset);
+    cb_term_assign(key,   &(curr_node->key));
+    cb_term_assign(value, &(curr_node->value));
+}
+
+
+static void
+cb_bst_iter_next(const struct cb    *cb,
+                 struct cb_bst_iter *iter)
+{
+    cb_offset_t curr_node_offset;
+
+    cb_assert(iter->count > 0);
+
+    curr_node_offset =
+        cb_bst_node_at(cb, iter->finger[iter->count - 1].offset)->child[1];
+    iter->count--;
+    while (curr_node_offset != CB_BST_SENTINEL)
+    {
+        iter->finger[iter->count].offset = curr_node_offset;
+        curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
+        iter->count++;
+    }
+}
+
+
 int
 cb_bst_traverse(const struct cb        *cb,
                 cb_offset_t             header_offset,
                 cb_bst_traverse_func_t  func,
                 void                   *closure)
 {
-    struct cb_bst_iter    iter;
-    struct cb_bst_header *header;
-    cb_offset_t           curr_node_offset;
+    struct cb_bst_iter curr, end;
     int ret;
 
-    if (header_offset == CB_BST_SENTINEL)
-        return 0;
-
-    header = cb_bst_header_at(cb, header_offset);
-    curr_node_offset = header->root_node_offset;
-    cb_assert(curr_node_offset != CB_BST_SENTINEL);
-
-    iter.depth = 0;
-
-traverse_left:
-    while (curr_node_offset != CB_BST_SENTINEL)
+    cb_bst_get_iter_start(cb, header_offset, &curr);
+    cb_bst_get_iter_end(cb, header_offset, &end);
+    while (!cb_bst_iter_eq(&curr, &end))
     {
-        iter.finger[iter.depth].offset = curr_node_offset;
-        iter.finger[iter.depth].node   = cb_bst_node_at(cb, curr_node_offset);
-        curr_node_offset = iter.finger[iter.depth].node->child[0];
-        iter.depth++;
+        struct cb_term key, value;
+
+        cb_bst_iter_deref(cb, &curr, &key, &value);
+        ret = func(&key, &value, closure);
+        if (ret != 0)
+            return ret;
+
+        cb_bst_iter_next(cb, &curr);
     }
-
-    /* Visit the top item from the stack. */
-    ret = func(&(iter.finger[iter.depth - 1].node->key),
-               &(iter.finger[iter.depth - 1].node->value),
-               closure);
-    if (ret != 0)
-        return ret;
-
-    curr_node_offset = iter.finger[iter.depth - 1].node->child[1];
-    iter.depth--;
-    if (curr_node_offset != CB_BST_SENTINEL || iter.depth != 0)
-        goto traverse_left;
 
     return 0;
 }
