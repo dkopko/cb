@@ -651,9 +651,10 @@ cb_bst_node_alloc(struct cb   **cb,
 
 /*
  *  Returns 0 if found or -1 if not found.
- *  If found, iter->finger[iter->count] will point to the node containing key.
- *  If not found, iter->finger[iter->count] will point to the parent node for
- *     which a node containing key may be inserted.
+ *  If found, iter->path_node_offset[iter->count - 1] will point to the node
+ *     containing key.
+ *  If not found, iter->path_node_offset[iter->count - 1] will point to the
+ *     parent node for which a node containing key may be inserted.
  */
 static int
 cb_bst_find_path(struct cb_bst_iter   *iter,
@@ -671,7 +672,8 @@ cb_bst_find_path(struct cb_bst_iter   *iter,
 
     while ((curr_node = cb_bst_node_at(cb, curr_offset)) != NULL)
     {
-        iter->finger[iter->count].offset = curr_offset;
+        iter->path_node_offset[iter->count] = curr_offset;
+        iter->count++;
 
         cmp = cb_term_cmp(cb, key, &(curr_node->key));
         if (cmp == 0)
@@ -679,7 +681,6 @@ cb_bst_find_path(struct cb_bst_iter   *iter,
 
         cb_assert(cmp == -1 || cmp == 1);
         curr_offset = (cmp == -1 ? curr_node->child[0] : curr_node->child[1]);
-        iter->count++;
     }
 
     return -1; /* NOT FOUND */
@@ -720,6 +721,7 @@ cb_bst_lookup(const struct cb      *cb,
     struct cb_bst_iter    iter;
     struct cb_bst_header *header;
     cb_offset_t           root_node_offset;
+    struct cb_term        ignored_key;
     int ret;
 
     if (header_offset == CB_BST_SENTINEL)
@@ -749,7 +751,7 @@ cb_bst_lookup(const struct cb      *cb,
     if (ret != 0)
         goto fail;
 
-    cb_term_assign(value, &(cb_bst_node_at(cb, iter.finger[iter.count].offset)->value));
+    cb_bst_iter_deref(cb, &iter, &ignored_key, value);
 
 fail:
     /* See NOTE above. */
@@ -2481,7 +2483,7 @@ cb_bst_get_iter_start(const struct cb    *cb,
     iter->count = 0;
     while (curr_node_offset != CB_BST_SENTINEL)
     {
-        iter->finger[iter->count].offset = curr_node_offset;
+        iter->path_node_offset[iter->count] = curr_node_offset;
         curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
         iter->count++;
     }
@@ -2502,16 +2504,11 @@ bool
 cb_bst_iter_eq(struct cb_bst_iter *lhs,
                struct cb_bst_iter *rhs)
 {
-    /*
-     * FIXME : Note this does not take into account the node and cmp fields,
-     * which should ideally be removed.
-     */
-
     if (lhs->count != rhs->count)
         return false;
 
     for (uint8_t i = 0; i < lhs->count; ++i)
-        if (lhs->finger[i].offset != rhs->finger[i].offset)
+        if (lhs->path_node_offset[i] != rhs->path_node_offset[i])
             return false;
 
     return true;
@@ -2527,11 +2524,11 @@ cb_bst_iter_next(const struct cb    *cb,
     cb_assert(iter->count > 0);
 
     curr_node_offset =
-        cb_bst_node_at(cb, iter->finger[iter->count - 1].offset)->child[1];
+        cb_bst_node_at(cb, iter->path_node_offset[iter->count - 1])->child[1];
     iter->count--;
     while (curr_node_offset != CB_BST_SENTINEL)
     {
-        iter->finger[iter->count].offset = curr_node_offset;
+        iter->path_node_offset[iter->count] = curr_node_offset;
         curr_node_offset = cb_bst_node_at(cb, curr_node_offset)->child[0];
         iter->count++;
     }
@@ -2546,7 +2543,7 @@ cb_bst_iter_deref(const struct cb          *cb,
 {
     struct cb_bst_node *curr_node;
 
-    curr_node = cb_bst_node_at(cb, iter->finger[iter->count - 1].offset);
+    curr_node = cb_bst_node_at(cb, iter->path_node_offset[iter->count - 1]);
     cb_term_assign(key,   &(curr_node->key));
     cb_term_assign(value, &(curr_node->value));
 }
