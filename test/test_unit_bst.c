@@ -126,9 +126,72 @@ main(int argc, char **argv)
     cb_bst_print(&cb, bst_root);
 
 
-    /* Test comparison, less than. */
-    /* Test comparison, equal to. */
-    /* Test comparison, greater than. */
+    /* Test comparison */
+    {
+        cb_offset_t    bst1 = CB_BST_SENTINEL,
+                       bst2 = CB_BST_SENTINEL;
+        struct cb_term key1,
+                       key2,
+                       key3,
+                       key4,
+                       value1,
+                       value2,
+                       value3,
+                       value4;
+
+        cb_term_set_u64(&key1, 111);
+        cb_term_set_u64(&key2, 222);
+        cb_term_set_u64(&key3, 333);
+        cb_term_set_u64(&key4, 444);
+        cb_term_set_u64(&value1, 1);
+        cb_term_set_u64(&value2, 2);
+        cb_term_set_u64(&value3, 3);
+        cb_term_set_u64(&value4, 4);
+
+        /* Empty BSTs are equal. */
+        cb_assert(cb_bst_cmp(cb, bst1, bst2) == 0);
+        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 0);
+
+        /* Filled BSTs greater than empty BSTs. */
+        ret = cb_bst_insert(&cb, &bst1, 0, &key1, &value1);
+        cb_assert(ret == 0);
+        cb_assert(cb_bst_cmp(cb, bst1, bst2) == 1);
+        cb_assert(cb_bst_cmp(cb, bst2, bst1) == -1);
+
+        /* Non-empty equal entries BSTs. */
+        ret = cb_bst_insert(&cb, &bst2, 0, &key1, &value1);
+        cb_assert(ret == 0);
+        cb_assert(cb_bst_cmp(cb, bst1, bst2) == 0);
+        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 0);
+
+        /* key difference. */
+        ret = cb_bst_insert(&cb, &bst1, 0, &key2, &value2);
+        cb_assert(ret == 0);
+        ret = cb_bst_insert(&cb, &bst2, 0, &key3, &value2);
+        cb_assert(ret == 0);
+        cb_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
+        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
+
+        /* value difference. */
+        ret = cb_bst_insert(&cb, &bst2, 0, &key2, &value2);
+        cb_assert(ret == 0);
+        ret = cb_bst_insert(&cb, &bst1, 0, &key3, &value2);
+        cb_assert(ret == 0);
+        ret = cb_bst_insert(&cb, &bst2, 0, &key3, &value3);
+        cb_assert(ret == 0);
+        cb_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
+        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
+
+        /* additional entries. */
+        ret = cb_bst_insert(&cb, &bst1, 0, &key3, &value3);
+        cb_assert(ret == 0);
+        ret = cb_bst_insert(&cb, &bst2, 0, &key3, &value3);
+        cb_assert(ret == 0);
+        ret = cb_bst_insert(&cb, &bst2, 0, &key4, &value4);
+        cb_assert(ret == 0);
+        cb_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
+        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
+    }
 
 
     /* Test size. */

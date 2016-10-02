@@ -2244,11 +2244,50 @@ cb_bst_cmp(const struct cb *cb,
            cb_offset_t      lhs_header_offset,
            cb_offset_t      rhs_header_offset)
 {
-    /*FIXME make this value-based by traversal of keys and values.  Right now
-     * it is identity-based. */
+    struct cb_bst_iter lhs_curr,
+                       lhs_end,
+                       rhs_curr,
+                       rhs_end;
+    struct cb_term     lhs_key,
+                       lhs_value,
+                       rhs_key,
+                       rhs_value;
+    int                cmp;
 
-    (void)cb;
-    return cb_offset_cmp(lhs_header_offset, rhs_header_offset);
+    cb_bst_get_iter_start(cb, lhs_header_offset, &lhs_curr);
+    cb_bst_get_iter_end(cb, lhs_header_offset, &lhs_end);
+    cb_bst_get_iter_start(cb, rhs_header_offset, &rhs_curr);
+    cb_bst_get_iter_end(cb, rhs_header_offset, &rhs_end);
+
+    while (!cb_bst_iter_eq(&lhs_curr, &lhs_end) &&
+           !cb_bst_iter_eq(&rhs_curr, &rhs_end))
+    {
+
+        cb_bst_iter_deref(cb, &lhs_curr, &lhs_key, &lhs_value);
+        cb_bst_iter_deref(cb, &rhs_curr, &rhs_key, &rhs_value);
+
+        cmp = cb_term_cmp(cb, &lhs_key, &rhs_key);
+        if (cmp != 0)
+            return cmp;
+
+        cmp = cb_term_cmp(cb, &lhs_value, &rhs_value);
+        if (cmp != 0)
+            return cmp;
+
+        cb_bst_iter_next(cb, &lhs_curr);
+        cb_bst_iter_next(cb, &rhs_curr);
+    }
+
+    if (cb_bst_iter_eq(&lhs_curr, &lhs_end))
+    {
+        if (cb_bst_iter_eq(&rhs_curr, &rhs_end))
+            return 0;  /* lhs equal to rhs*/
+
+        return -1; /* lhs less than rhs */
+    }
+
+    cb_assert(cb_bst_iter_eq(&rhs_curr, &rhs_end));
+    return 1; /* lhs greater than rhs */
 }
 
 
