@@ -14,36 +14,46 @@ TODO
 * Array generator to replace .extend() call?
 """
 
-script, filename = sys.argv
-
 known_impls = { }
 known_ops = { }
 impl_measures = { }
 
-with open(filename,'r') as f:
-    for x in f:
-        # Skip empty lines:
-        x = x.rstrip()
-        if not x:
-            continue
-        # Skip lines not beginning with 'HIST':
-        y = x.split(' ')
-        if y[0] != 'HIST':
-            continue
-        # Parse line format: 'HIST' <impl> <op> <bucket> <count>:
-        impl = y[1]
-        op = y[2]
-        bucket = numpy.int(y[3])
-        count = numpy.int(y[4])
-        arr = [bucket for i in xrange(count)]
-        """ print 'bucket: ', bucket, 'count: ', count, 'arr: ', arr """
-        if not impl in impl_measures:
-            impl_measures[impl] = {}
-            known_impls[impl] = 1
-        if not op in impl_measures[impl]:
-            impl_measures[impl][op] = []
-            known_ops[op] = 1
-        impl_measures[impl][op].extend(arr)
+
+def consume_filename(filename):
+    print 'Begin consuming file: \"', filename, '\".'
+    with open(filename,'r') as f:
+        for x in f:
+            # Skip empty lines:
+            x = x.rstrip()
+            if not x:
+                continue
+            # Skip lines not beginning with 'HIST':
+            y = x.split(' ')
+            if y[0] != 'HIST':
+                continue
+            # Parse line format: 'HIST' <impl> <op> <bucket> <count>:
+            impl = y[1]
+            op = y[2]
+            bucket = numpy.int(y[3])
+            count = numpy.int(y[4])
+            arr = [bucket for i in xrange(count)]
+            """ print 'bucket: ', bucket, 'count: ', count, 'arr: ', arr """
+            if not impl in impl_measures:
+                impl_measures[impl] = {}
+                known_impls[impl] = 1
+            if not op in impl_measures[impl]:
+                impl_measures[impl][op] = []
+                known_ops[op] = 1
+            impl_measures[impl][op].extend(arr)
+    print 'End consuming file: \"', filename, '\".'
+
+
+if len(sys.argv) < 2:
+    print 'Usage: ', sys.argv[0], ' <filename> [<filename>...]'
+    exit(1)
+
+for filename in sys.argv[1:]:
+    consume_filename(filename)
 
 
 """
@@ -94,6 +104,7 @@ pyplot.tight_layout()
 pyplot.savefig("figure.png")
 pyplot.savefig("figure.svg")
 
+#For manual testing:
 #mng = pyplot.get_current_fig_manager()
 #mng.resize(*mng.window.maxsize())
 #pyplot.show()
