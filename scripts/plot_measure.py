@@ -11,7 +11,6 @@ from matplotlib import pyplot
 """
 TODO
 * Move legend elsewhere
-* Boxplot option
 * Array generator to replace .extend() call?
 """
 
@@ -46,6 +45,7 @@ with open(filename,'r') as f:
             known_ops[op] = 1
         impl_measures[impl][op].extend(arr)
 
+
 """
 Layout.
 """
@@ -69,10 +69,9 @@ bins = numpy.logspace(0.1, numpy.log10(max(maxs)), 500)
 
 
 """
-For each operation type, graph each implementation as a histogram.  We use
-a symlog on the y axis because some bins will have a zero count.
-(I'd really like to overlay a boxplot on each of these histograms, but figuring
- out how to do this in matplotlib has been a fucking nightmare.)
+For each operation type, graph each implementation as a histogram and overlay
+a boxplot.  We use a symlog on the y axis because some bins will have a zero
+count.
 """
 i = 0
 for op in sorted(known_ops.keys()):
@@ -85,13 +84,16 @@ for op in sorted(known_ops.keys()):
     for impl in known_impls.keys():
         ax.hist(impl_measures[impl][op], bins=bins, label=impl, histtype='step')
     # Boxplot
-    #ax2 = axes[i*2+1]
-    #ax2.boxplot([impl_measures[im][op] for im in known_impls.keys()], notch=True, vert=False, whis=[0, 99], labels=known_impls.keys())
-    #ax2.set_xlim(left=1)
+    ax2 = axes[i].twinx();
+    ax2.boxplot([impl_measures[im][op] for im in known_impls.keys()], notch=True, vert=False, whis=[0, 99], labels=known_impls.keys(), sym='')
+    ax2.set_xlim(left=1)
     i=i+1
 
 pyplot.legend(loc='best')
 pyplot.tight_layout()
 pyplot.savefig("figure.png")
 pyplot.savefig("figure.svg")
+
+#mng = pyplot.get_current_fig_manager()
+#mng.resize(*mng.window.maxsize())
 #pyplot.show()
