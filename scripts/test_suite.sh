@@ -181,11 +181,11 @@ function generate_map_latency_plots()
     pushd "${test_root}"
 
     # Measure std::map
-    perf stat ${perfstatargs} -o stdmap_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    perf stat ${perfstatargs} --delay 1000 -o stdmap_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >/dev/null 2>&1
     "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >stdmap.out 2>&1
 
     # Measure cb_bst
-    perf stat ${perfstatargs} -o cbbst_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    perf stat ${perfstatargs} --delay 1000 -o cbbst_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
     "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >cbbst.out 2>&1
     ls -l "${test_root}"/map-*-* >"${test_root}/cbbst_used_maps"
     rm "${test_root}"/map-*-*

@@ -1142,11 +1142,19 @@ int main(int argc, char **argv)
 
 
     /* Measure. */
+    std::vector<void*> closures;
     for (std::vector<struct map_impl>::size_type i = 0;
          i < impls.size();
          ++i)
     {
-        void *closure = impls[i].create_cb(argc, argv);
+        closures.push_back(impls[i].create_cb(argc, argv));
+    }
+    sleep(2); /* Coordinate with perf-stat */
+    for (std::vector<struct map_impl>::size_type i = 0;
+         i < impls.size();
+         ++i)
+    {
+        void *closure = closures[i];
         impls[i].handle_events_cb(events, total_num_events, closure);
         impls[i].handle_events_cb(postremove_events, num_postremove_events, closure);
         impls[i].destroy_cb(closure);
