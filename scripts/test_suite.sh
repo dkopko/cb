@@ -174,15 +174,24 @@ function generate_map_latency_plots()
 {
     local test_root="${SUITE_ROOT}/map_latency"
     local outfile="${test_root}/out"
+    local perfevents=$(perf list --raw-dump)
+    local perfstatargs=$(for i in ${perfevents}; do printf -- " -e $i"; done)
 
     mkdir "${test_root}"
     pushd "${test_root}"
 
-    "${BUILD_ROOT}"/Release/test_measure --ring-size=134217728 --ratios=1,1,1,1,1,1 >"${outfile}" 2>&1
-    "${SCRIPTS_ROOT}/plot_measure.py" "${outfile}"
+    # Measure std::map
+    perf stat ${perfstatargs} -o stdmap_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >stdmap.out 2>&1
 
-    ls -l "${test_root}"/map-*-* >"${test_root}/used_maps"
+    # Measure cb_bst
+    perf stat ${perfstatargs} -o cbbst_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >cbbst.out 2>&1
+    ls -l "${test_root}"/map-*-* >"${test_root}/cbbst_used_maps"
     rm "${test_root}"/map-*-*
+
+    # Graph comparison of measurements
+    "${SCRIPTS_ROOT}"/plot_measure.py stdmap.out cbbst.out
 
     popd
 }
@@ -198,6 +207,9 @@ function generate_toplevel_html()
         <html>
         <head>
         <title>CB Test Run ${RUN_NAME}</title>
+        <style type="text/css">
+            pre { font-size:xx-small }
+        </style>
         </head>
         <body>
             CB Tests performed on ${RUN_NAME}.
@@ -210,8 +222,10 @@ function generate_toplevel_html()
                 <object data="map_latency/figure.svg" type="image/svg+xml" width="100%"></object>
             <h2>cb_bst Flamegraph</h2>
                 <object data="map_flamegraphs/cbbst_flame.svg" type="image/svg+xml" width="100%"></object>
-            <h2>cb_map Flamegraph</h2>
-                <object data="map_flamegraphs/cbmap_flame.svg" type="image/svg+xml" width="100%"></object>
+            <h2>stdmap perf stat</h2>
+                <pre>$(cat "${SUITE_ROOT}/map_latency/stdmap_perf.out")</pre>
+            <h2>cb_bst perf stat</h2>
+                <pre>$(cat "${SUITE_ROOT}/map_latency/cbbst_perf.out")</pre>
         </body>
         </html>
 EOF
