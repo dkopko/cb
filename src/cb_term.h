@@ -140,6 +140,7 @@ cb_term_to_str(struct cb            **cb,
 /*
  * Assigns the term 'rhs' to the term 'lhs'.  This variant is suitable for cases
  * where 'lhs' and 'rhs' are not known to be distinct.
+ * FIXME - determine how this should interact with cutoff_offsets.
  */
 CB_INLINE void
 cb_term_assign(struct cb_term *lhs, const struct cb_term *rhs)
@@ -157,6 +158,7 @@ cb_term_assign(struct cb_term *lhs, const struct cb_term *rhs)
 /*
  * Assigns the term 'rhs' to the term 'lhs'.  This variant is suitable for cases
  * where 'lhs' and 'rhs' are known to be distinct.
+ * FIXME - determine how this should interact with cutoff_offsets.
  */
 CB_INLINE void
 cb_term_assign_restrict(struct cb_term *__restrict__       lhs,
