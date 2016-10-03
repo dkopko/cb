@@ -244,6 +244,10 @@ static void cbbst_handle_events(struct event *events,
     struct cb_term value;
     int ret;
 
+    /*FIXME there is a bug when using 0 instead of cb_cursor() for cutoff_offset
+     * for in-place modifications.
+     */
+
     for (unsigned int i = 0; i < events_count; ++i)
     {
         struct event *e = &events[i];
