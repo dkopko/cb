@@ -30,9 +30,9 @@ cb_assert_impl(bool b, const char *str, const char *func, int line)
     /* LCOV_EXCL_START */
     if (!b)
     {
-        fprintf(stderr, "Assertion \'%s\' failed. (%s():%d)\n",
+        fprintf(stdout, "Assertion \'%s\' failed. (%s():%d)\n",
                 str, func, line);
-        fflush(stderr);
+        fflush(stdout);
         abort();
     }
     /* LCOV_EXCL_STOP */
