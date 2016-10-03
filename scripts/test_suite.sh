@@ -181,11 +181,11 @@ function generate_map_latency_plots()
     pushd "${test_root}"
 
     # Measure std::map
-    perf stat ${perfstatargs} --delay 1000 -o stdmap_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    perf stat ${perfstatargs} --delay 1000 -x \; -o stdmap_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >/dev/null 2>&1
     "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >stdmap.out 2>&1
 
     # Measure cb_bst
-    perf stat ${perfstatargs} --delay 1000 -o cbbst_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    perf stat ${perfstatargs} --delay 1000 -x \; -o cbbst_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
     "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >cbbst.out 2>&1
     ls -l "${test_root}"/map-*-* >"${test_root}/cbbst_used_maps"
     rm "${test_root}"/map-*-*
@@ -222,10 +222,8 @@ function generate_toplevel_html()
                 <object data="map_latency/figure.svg" type="image/svg+xml" width="100%"></object>
             <h2>cb_bst Flamegraph</h2>
                 <object data="map_flamegraphs/cbbst_flame.svg" type="image/svg+xml" width="100%"></object>
-            <h2>stdmap perf stat</h2>
-                <pre>$(cat "${SUITE_ROOT}/map_latency/stdmap_perf.out")</pre>
-            <h2>cb_bst perf stat</h2>
-                <pre>$(cat "${SUITE_ROOT}/map_latency/cbbst_perf.out")</pre>
+            <h2>perf stat comparison</h2>
+            $("${SCRIPTS_ROOT}"/perf_diff_to_html_table.py stdmap "${SUITE_ROOT}"/map_latency/stdmap_perf.out cb_bst "${SUITE_ROOT}"/map_latency/cbbst_perf.out)
         </body>
         </html>
 EOF
