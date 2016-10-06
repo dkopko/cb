@@ -209,6 +209,9 @@ function generate_toplevel_html()
         <title>CB Test Run ${RUN_NAME}</title>
         <style type="text/css">
             pre { font-size:xx-small }
+            td.perfstatincr { color:red; }
+            td.perfstatdecr { color:green; }
+            table.perfstats td:not(:first-child) { text-align:right; }
         </style>
         </head>
         <body>

@@ -44,12 +44,14 @@ def read_filename(columnname, filename):
 
 
 def print_html():
-    print '<table>'
+    print '<table class="perfstats">'
     #Print header row
     print '<tr>'
     print '<th></th>' #empty corner cell
-    for c in loaded_columnnames:
+    print '<th>', loaded_columnnames[0], '</th>'
+    for c in loaded_columnnames[1:]:
         print '<th>', c, '</th>'
+        print '<th>%</th>'
     print '</tr>'
     #Print event rows
     for e in eventnames:
@@ -57,16 +59,15 @@ def print_html():
         print '<td>', e, '</td>'
         # Print origin column
         origin_val = float(eventdata[loaded_filenames[0]][e])
-        print('<td>%0.1f</td>' % (origin_val))
+        print('<td>%0.1e</td>' % (origin_val))
         # Print delta columns
         for f in loaded_filenames[1:]:
             new_val = float(eventdata[f][e])
-            delta = new_val - origin_val
-            delta_pct = (delta / origin_val) * 100.0 if origin_val != 0 else 0
-            if delta > 0:
-                print('<td>%0.1f (+%0.1f%%)</td>' % (new_val, delta_pct))
+            pct = (new_val / origin_val) * 100.0 if origin_val != 0 else 0
+            if new_val > origin_val:
+                print('<td class="perfstatincr">%0.1e</td><td class="perfstatincr">(%0.1f%%)</td>' % (new_val, pct))
             else:
-                print('<td>%0.1f (%0.1f%%)</td>' % (new_val, delta_pct))
+                print('<td class="perfstatdecr">%0.1e</td><td class="perfstatdecr">(%0.1f%%)</td>' % (new_val, pct))
         print '</tr>'
     print '</table>'
 
