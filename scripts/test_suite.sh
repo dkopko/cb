@@ -196,34 +196,33 @@ function generate_map_flamegraphs()
 {
     local test_root="${SUITE_ROOT}/map_flamegraphs"
     local outfile="${test_root}/generate_map_flamegraphs.out"
-    local stdmap_flamegraph="${test_root}/stdmap_flame.svg"
-    local cbbst_flamegraph="${test_root}/cbbst_flame.svg"
-    local cbmap_flamegraph="${test_root}/cbmap_flame.svg"
     local foldedfile="${test_root}/folded.tmp"
 
     mkdir "${test_root}"
     pushd "${test_root}"
 
     perf record -F 1000 -a -g -- \
-        "${BUILD_ROOT}"/Debug/test_measure --ring-size=134217728 --ratios=1,1,1,1,1,1 >"${outfile}" 2>&1
+        "${BUILD_ROOT}"/Debug/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >"${outfile}" 2>&1
     perf script |_omit_offsets |stackcollapse-perf.pl --kernel >"${foldedfile}"
     gzip perf.data
 
     cat "${foldedfile}" |
         _exclude_kernel |
-        fgrep stdmap_handle_events |
-        flamegraph.pl >"${stdmap_flamegraph}"
+        fgrep cbbst_handle_events |
+        fgrep cb_bst_insert |
+        flamegraph.pl >flame.cb_bst_insert.svg
 
     cat "${foldedfile}" |
         _exclude_kernel |
         fgrep cbbst_handle_events |
-        flamegraph.pl >"${cbbst_flamegraph}"
+        fgrep cb_bst_lookup |
+        flamegraph.pl >flame.cb_bst_lookup.svg
 
     cat "${foldedfile}" |
         _exclude_kernel |
-        fgrep cbmap_handle_events |
-        grep -v cb_map_consolidate |
-        flamegraph.pl >"${cbmap_flamegraph}"
+        fgrep cbbst_handle_events |
+        fgrep cb_bst_delete |
+        flamegraph.pl >flame.cb_bst_delete.svg
 
     rm "${test_root}"/map-*-*
     rm "${foldedfile}"
@@ -285,8 +284,12 @@ function generate_toplevel_html()
             <h1>Maps</h1>
             <h2>Latency</h2>
                 <object data="map_latency/figure.svg" type="image/svg+xml" width="100%"></object>
-            <h2>cb_bst Flamegraph</h2>
-                <object data="map_flamegraphs/cbbst_flame.svg" type="image/svg+xml" width="100%"></object>
+            <h2>cb_bst_insert() Flamegraph</h2>
+                <object data="map_flamegraphs/flame.cb_bst_insert.svg" type="image/svg+xml" width="100%"></object>
+            <h2>cb_bst_lookup() Flamegraph</h2>
+                <object data="map_flamegraphs/flame.cb_bst_lookup.svg" type="image/svg+xml" width="100%"></object>
+            <h2>cb_bst_delete() Flamegraph</h2>
+                <object data="map_flamegraphs/flame.cb_bst_delete.svg" type="image/svg+xml" width="100%"></object>
             <h2>perf stat comparison</h2>
             $("${SCRIPTS_ROOT}"/perf_diff_to_html_table.py stdmap "${SUITE_ROOT}"/map_latency/stdmap_perf.out cb_bst "${SUITE_ROOT}"/map_latency/cbbst_perf.out)
         </body>
