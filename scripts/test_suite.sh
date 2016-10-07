@@ -9,7 +9,7 @@ SCRIPTS_ROOT="${PROJECT_ROOT}/scripts"
 #Overrideable settings
 BUILD_ROOT="${BUILD_ROOT:-${PROJECT_ROOT}/BUILD}"
 TESTRUNS_ROOT="${TESTRUNS_ROOT:-${PROJECT_ROOT}/TESTRUNS}"
-SHOW_PROG="${SHOW_PROG:-xdg-open}"
+SHOW_PROG="${SHOW_PROG:-}"
 
 RUN_NAME="$(date +'%Y%m%d-%H%M%S')"
 SUITE_ROOT="${TESTRUNS_ROOT}/${RUN_NAME}"
@@ -25,6 +25,74 @@ Where OPTS are of the following:
     -h|--help    Print this message.
     -s|--show    Auto-load the HTML test output on success.
 EOF
+}
+
+
+function detect_binary()
+{
+    which $1 >/dev/null 2>&1
+}
+
+
+function check_dependencies()
+{
+    local success="y"
+
+    if ! detect_binary "${SHOW_PROG}"
+    then
+        SHOW_PROG=""
+        for p in xdg-open firefox chrome
+        do
+            if detect_binary "${p}"
+            then
+                SHOW_PROG="${p}"
+                break
+            fi
+        done
+    fi
+    if [[ -z "${SHOW_PROG}" ]]
+    then
+        {
+            cat <<EOF
+Failed to find suitable program for launching .html files.  Please make sure one
+of xdg-open, firefox, or chrome are on your PATH, or else specify a SHOW_PROG
+environment variable pointing to an executable which can view .html files.
+EOF
+        } 1>&2
+
+        success="n"
+    fi
+
+    if ! detect_binary lcov || ! detect_binary genhtml
+    then
+        echo "'lcov' package appears missing." 1>&2
+        success="n"
+    fi
+
+    if ! detect_binary perf
+    then
+        echo "'perf' package appears missing." 1>&2
+        success="n"
+    fi
+
+    if ! detect_binary flamegraph.pl || ! detect_binary stackcollapse-perf.pl
+    then
+        {
+            cat <<EOF
+Flamegraph scripts (flamegraph.pl and stackcollapse-perf.pl) are not on your
+PATH.  Please place these scripts on your PATH after retrieving them via the
+following git clone command:
+git clone https://github.com/brendangregg/FlameGraph.git
+EOF
+        } 1>&2
+
+        success="n"
+    fi
+
+    if [[ "${success}" != "y" ]]
+    then
+        exit 1
+    fi
 }
 
 
@@ -132,12 +200,6 @@ function generate_map_flamegraphs()
     local cbbst_flamegraph="${test_root}/cbbst_flame.svg"
     local cbmap_flamegraph="${test_root}/cbmap_flame.svg"
     local foldedfile="${test_root}/folded.tmp"
-
-    if [[ -z "$(which flamegraph.pl)" || -z "$(which stackcollapse-perf.pl)" ]]
-    then
-        echo "Skipping generate_map_flamegraphs() because FlameGraph scripts not present." 1>&2
-        return 1
-    fi
 
     mkdir "${test_root}"
     pushd "${test_root}"
@@ -266,6 +328,8 @@ then
     exit 1
 fi
 
+# Check that the programs we'll be using are installed.
+check_dependencies
 
 # Ensure builds are up to date.
 cd "${PROJECT_ROOT}"
