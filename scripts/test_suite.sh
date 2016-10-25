@@ -313,6 +313,9 @@ EOF
     popd
 }
 
+# Check that the programs we'll be using are installed.
+check_dependencies
+
 #Process commandline arguments
 while [[ $# -gt 0 ]]
 do
@@ -342,9 +345,6 @@ then
     print_usage 1>&2
     exit 1
 fi
-
-# Check that the programs we'll be using are installed.
-check_dependencies
 
 # Ensure builds are up to date.
 cd "${PROJECT_ROOT}"
