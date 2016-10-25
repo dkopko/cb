@@ -231,6 +231,16 @@ function generate_map_flamegraphs()
 }
 
 
+function _summarize_perf()
+{
+    # Extracts only data lines, and rearranges their contents into the following
+    # format:
+    # key<space>value
+
+    grep \; |awk 'BEGIN {FS=";"} {print $3 " " $1}'
+}
+
+
 function generate_map_latency_plots()
 {
     local test_root="${SUITE_ROOT}/map_latency"
@@ -242,11 +252,13 @@ function generate_map_latency_plots()
     pushd "${test_root}"
 
     # Measure std::map
-    perf stat ${perfstatargs} --delay 1000 -x \; -o stdmap_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    perf stat ${perfstatargs} --delay 1000 -x \; -o stdmap_perf0.out "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    _summarize_perf <stdmap_perf0.out >stdmap_perf.out
     "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >stdmap.out 2>&1
 
     # Measure cb_bst
-    perf stat ${perfstatargs} --delay 1000 -x \; -o cbbst_perf.out "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    perf stat ${perfstatargs} --delay 1000 -x \; -o cbbst_perf0.out "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
+    _summarize_perf <cbbst_perf0.out >cbbst_perf.out
     "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >cbbst.out 2>&1
     ls -l "${test_root}"/map-*-* >"${test_root}/cbbst_used_maps"
     rm "${test_root}"/map-*-*

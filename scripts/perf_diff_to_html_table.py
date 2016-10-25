@@ -24,14 +24,10 @@ def read_filename(columnname, filename):
             # Skip lines beginning with '#':
             if x[0] == '#':
                 continue
-            # Split the row (seems to differ in format from 'man perf-stat')
-            y = x.split(';')
-            count       = y[0] if len(y) > 0 else 'n/a'
-            eventname   = y[2] if len(y) > 2 else 'n/a'
-            measurepct  = y[4] if len(y) > 4 else 'n/a'
-            metric_val  = y[5] if len(y) > 5 else 'n/a'
-            metric_unit = y[6] if len(y) > 6 else 'n/a'
-            #print 'eventname: ', eventname, ' count: ', count, ' ', metric_val, ' ', metric_unit, ' (', measurepct, '%)'
+            y = x.split(' ')
+            eventname = y[0] if len(y) > 0 else 'n/a'
+            count     = y[1] if len(y) > 1 else 'n/a'
+            #print 'eventname: ', eventname, ' count: ', count
             if not eventname in known_eventnames:
                 known_eventnames[eventname] = 1
                 eventnames.append(eventname)
