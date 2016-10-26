@@ -267,7 +267,7 @@ static void cbbst_handle_events(struct event *events,
                 e->t0 = getticks();
                 ret = cb_bst_insert(&(state->cb),
                                     &(state->root),
-                                    cb_cursor(state->cb),
+                                    0,
                                     &key,
                                     &value);
                 e->t1 = getticks();
@@ -282,7 +282,7 @@ static void cbbst_handle_events(struct event *events,
                 e->t0 = getticks();
                 ret = cb_bst_delete(&(state->cb),
                                     &(state->root),
-                                    cb_cursor(state->cb),
+                                    0,
                                     &key);
                 e->t1 = getticks();
                 if (ret != 0 && e->op != EOP_REMOVE_UNKNOWN)
