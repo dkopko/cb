@@ -280,7 +280,7 @@ function generate_map_latency_plots()
 function generate_stat_summary()
 {
     # This generates a file consisting of "key<space>value" lines which can
-    # consumed and rendered into a tabular format by perf_diff_to_html_table.py
+    # consumed and rendered into a tabular format by stat_files_to_html_table.py
 
     {
         echo "__NAME__ ${RUN_NAME}"
@@ -308,9 +308,9 @@ function generate_toplevel_html()
         <title>CB Test Run ${RUN_NAME}</title>
         <style type="text/css">
             pre { font-size:xx-small }
-            td.perfstatincr { color:red; }
-            td.perfstatdecr { color:green; }
-            table.perfstats td:not(:first-child) { text-align:right; }
+            td.statincr { color:red; }
+            td.statdecr { color:green; }
+            table.stats td:not(:first-child) { text-align:right; }
         </style>
         </head>
         <body>
@@ -329,9 +329,9 @@ function generate_toplevel_html()
             <h2>cb_bst_delete() Flamegraph</h2>
                 <object data="map_flamegraphs/flame.cb_bst_delete.svg" type="image/svg+xml" width="100%"></object>
             <h2>perf stat comparison</h2>
-            $("${SCRIPTS_ROOT}"/perf_diff_to_html_table.py "${SUITE_ROOT}"/map_latency/stdmap_perf.out "${SUITE_ROOT}"/map_latency/cbbst_perf.out)
+            $("${SCRIPTS_ROOT}"/stat_files_to_html_table.py "${SUITE_ROOT}"/map_latency/stdmap_perf.out "${SUITE_ROOT}"/map_latency/cbbst_perf.out)
             <h2>Last N runs comparison</h2>
-            $("${SCRIPTS_ROOT}"/perf_diff_to_html_table.py "${SUITE_ROOT}"/stat_summary $(_list_last_n_summaries 5))
+            $("${SCRIPTS_ROOT}"/stat_files_to_html_table.py "${SUITE_ROOT}"/stat_summary $(_list_last_n_summaries 5))
         </body>
         </html>
 EOF

@@ -14,8 +14,8 @@
 # key column and the value column.  For every additional specified file, two
 # additional columns will be printed:  the new value, and its percentage
 # relative to the origin file's value.  Percentages over 100% (increases) will
-# have a class of 'perfstatincr', and percentages under 100% (decreases) will
-# have a class of 'perfstatdecr', suitable for CSS styling.
+# have a class of 'statincr', and percentages under 100% (decreases) will have a
+# class of 'statdecr', suitable for CSS styling.
 #
 # The name of each file to be used for its column header must be specified
 # within the file itself via the key '__NAME__'.  An optional key '__PATCH__'
@@ -60,7 +60,7 @@ def read_filename(filename):
 
 
 def print_html():
-    print '<table class="perfstats">'
+    print '<table class="stats">'
     #Print header row
     print '<tr>'
     print '<th></th>' #empty corner cell
@@ -89,9 +89,9 @@ def print_html():
             new_val = float(eventdata[f][e])
             pct = (new_val / origin_val) * 100.0 if origin_val != 0 else 0
             if new_val > origin_val:
-                print('<td class="perfstatincr">%0.1e</td><td class="perfstatincr">%0.1f%%</td>' % (new_val, pct))
+                print('<td class="statincr">%0.1e</td><td class="statincr">%0.1f%%</td>' % (new_val, pct))
             else:
-                print('<td class="perfstatdecr">%0.1e</td><td class="perfstatdecr">%0.1f%%</td>' % (new_val, pct))
+                print('<td class="statdecr">%0.1e</td><td class="statdecr">%0.1f%%</td>' % (new_val, pct))
         print '</tr>'
     print '</table>'
 
