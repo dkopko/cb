@@ -1974,15 +1974,29 @@ cb_bst_delete(struct cb            **cb,
 
     cb_log_debug("delete of key %s", cb_term_to_str(cb, key));
 
-    /* Prepare a new header. */
     s.new_header_offset = *header_offset;
-    if (s.new_header_offset == CB_BST_SENTINEL)
+
+    /* For trees not containing the key, there is nothing to do. */
+    /* NOTE: We have two options here:
+     * 1) Simply check if the key exists before we proceed with the modify-in-
+     *    place approach to deletion using cb_bst_select_modifiable_node(),
+     *    aborting the deletion request if the key does not exist.
+     * 2) Disallow reuse of existing nodes provided by
+     *    cb_bst_select_modifiable_node() and always speculatively copy the
+     *    path until we know whether the key exists or not.  If the key doesn't
+     *    exist, rewind to discard this new path.  If the key does exist, commit
+     *    by modifying the passed-in header_node_offset.  This prevents bogus,
+     *    unrewindable modifications to the tree for missing keys.
+     * Option 1 provides a denser tree at the cost of a double traversal.  It is
+     * presently the option we use.
+     */
+    if (!cb_bst_contains_key(*cb, s.new_header_offset, key))
     {
-        /* For empty trees, there is nothing to do. */
         ret = -1;
         goto fail;
     }
 
+    /* Prepare a new header. */
     ret = cb_bst_header_copy(cb, &s.new_header_offset);
     if (ret != 0)
         goto fail;
