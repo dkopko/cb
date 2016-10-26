@@ -2,6 +2,26 @@
 
 # Copyright 2016 Daniel Kopko.
 
+# This script generates code for an HTML table based on input data files,
+# suitable for embedding into a wider HTML document.
+#
+# This expects on the commandline a series of 1 or more files having contents
+# whose lines are of the following contents:
+#  #comment line
+#  key<space>value
+#
+# The first specified file will be the 'origin' and will print two columns, the
+# key column and the value column.  For every additional specified file, two
+# additional columns will be printed:  the new value, and its percentage
+# relative to the origin file's value.  Percentages over 100% (increases) will
+# have a class of 'perfstatincr', and percentages under 100% (decreases) will
+# have a class of 'perfstatdecr', suitable for CSS styling.
+#
+# The name of each file to be used for its column header must be specified
+# within the file itself via the key '__NAME__'.  An optional key '__PATCH__'
+# can be specified with a value of a filename, which will cause an anchor named
+# "patch" to this file to appear in the header as well.
+
 import math
 import sys
 
