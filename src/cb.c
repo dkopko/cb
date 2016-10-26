@@ -175,6 +175,10 @@ static size_t cb_page_size;
 static const unsigned int CB_MAX_MMAP_RETRIES = 5;
 
 
+/*
+ * FIXME, perhaps default to MAP_PRIVATE as MAP_SHARED shows latency impact
+ * in perf due to page faults.
+ */
 struct cb_params CB_PARAMS_DEFAULT =
     {
         .ring_size = 0,

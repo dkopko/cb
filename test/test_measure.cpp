@@ -177,6 +177,8 @@ static void* cbbst_create(int argc, char **argv)
     state->params.flags |= CB_PARAMS_F_LEAVE_FILES;
     state->params.ring_size = 8192;
     state->params.mmap_flags &= ~MAP_ANONYMOUS;
+    state->params.mmap_flags &= ~MAP_SHARED;
+    state->params.mmap_flags |= MAP_PRIVATE;
     state->params.mmap_flags |= MAP_POPULATE;
 
     optind = 1;
