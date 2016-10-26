@@ -290,6 +290,12 @@ function generate_stat_summary()
 }
 
 
+function _list_last_n_summaries()
+{
+    ls -tr ${TESTRUNS_ROOT}/*-*/stat_summary |grep -v "${RUN_NAME}" |tail -n $1
+}
+
+
 function generate_toplevel_html()
 {
     pushd "${SUITE_ROOT}"
@@ -324,6 +330,8 @@ function generate_toplevel_html()
                 <object data="map_flamegraphs/flame.cb_bst_delete.svg" type="image/svg+xml" width="100%"></object>
             <h2>perf stat comparison</h2>
             $("${SCRIPTS_ROOT}"/perf_diff_to_html_table.py "${SUITE_ROOT}"/map_latency/stdmap_perf.out "${SUITE_ROOT}"/map_latency/cbbst_perf.out)
+            <h2>Last N runs comparison</h2>
+            $("${SCRIPTS_ROOT}"/perf_diff_to_html_table.py "${SUITE_ROOT}"/stat_summary $(_list_last_n_summaries 5))
         </body>
         </html>
 EOF
