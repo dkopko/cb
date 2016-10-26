@@ -13,7 +13,7 @@ eventnames = []
 eventdata = { }
 
 
-def read_filename(columnname, filename):
+def read_filename(filename):
     global loadindex
     with open(filename, 'r') as f:
         for x in f:
@@ -34,7 +34,7 @@ def read_filename(columnname, filename):
             if not filename in eventdata:
                 eventdata[filename] = { }
             eventdata[filename][eventname] = count
-    loaded_columnnames.append(columnname)
+    loaded_columnnames.append(eventdata[filename]['__NAME__'])
     loaded_filenames.append(filename)
     loadindex = loadindex + 1
 
@@ -44,13 +44,21 @@ def print_html():
     #Print header row
     print '<tr>'
     print '<th></th>' #empty corner cell
+    # Print origin column header
     print '<th>', loaded_columnnames[0], '</th>'
+    # Print delta column headers
+    i=1
     for c in loaded_columnnames[1:]:
-        print '<th>', c, '</th>'
-        print '<th>%</th>'
+        if eventdata[loaded_filenames[i]]['__PATCH__']:
+            print('<th>%s<br><a href="%s">patch</a></th><th>%%</th>' % (c, eventdata[loaded_filenames[i]]['__PATCH__']))
+        else:
+            print('<th>%s</th><th>%%</th>' % (c))
+        i = i + 1
     print '</tr>'
     #Print event rows
-    for e in eventnames:
+    for e in sorted(eventnames):
+        if e == '__NAME__' or e == '__PATCH__':
+            continue
         print '<tr>'
         print '<td>', e, '</td>'
         # Print origin column
@@ -61,9 +69,9 @@ def print_html():
             new_val = float(eventdata[f][e])
             pct = (new_val / origin_val) * 100.0 if origin_val != 0 else 0
             if new_val > origin_val:
-                print('<td class="perfstatincr">%0.1e</td><td class="perfstatincr">(%0.1f%%)</td>' % (new_val, pct))
+                print('<td class="perfstatincr">%0.1e</td><td class="perfstatincr">%0.1f%%</td>' % (new_val, pct))
             else:
-                print('<td class="perfstatdecr">%0.1e</td><td class="perfstatdecr">(%0.1f%%)</td>' % (new_val, pct))
+                print('<td class="perfstatdecr">%0.1e</td><td class="perfstatdecr">%0.1f%%</td>' % (new_val, pct))
         print '</tr>'
     print '</table>'
 
@@ -73,13 +81,11 @@ if len(sys.argv) < 2:
     print 'Where these files have been generated have been generated with \'perf stat -x \; ... \''
     exit(1)
 
-columnnames = sys.argv[1::2]
-filenames = sys.argv[2::2]
+filenames = sys.argv[1::]
 
 for i in range(len(filenames)):
-    c = columnnames[i]
     f = filenames[i]
-    read_filename(c, f)
+    read_filename(f)
 
 print_html()
 

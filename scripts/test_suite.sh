@@ -253,12 +253,19 @@ function generate_map_latency_plots()
 
     # Measure std::map
     perf stat ${perfstatargs} --delay 1000 -x \; -o stdmap_perf0.out "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >/dev/null 2>&1
-    _summarize_perf <stdmap_perf0.out >stdmap_perf.out
+    {
+        echo "__NAME__ std::map"
+        _summarize_perf <stdmap_perf0.out
+    } >stdmap_perf.out
     "${BUILD_ROOT}"/Release/test_measure --impl=stdmap --ratios=1,1,1,1,1,1 >stdmap.out 2>&1
 
     # Measure cb_bst
     perf stat ${perfstatargs} --delay 1000 -x \; -o cbbst_perf0.out "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >/dev/null 2>&1
-    _summarize_perf <cbbst_perf0.out >cbbst_perf.out
+    {
+        echo "__NAME__ cb_bst"
+        echo "__PATCH__ ${SUITE_ROOT}/patch"
+        _summarize_perf <cbbst_perf0.out
+    } >cbbst_perf.out
     "${BUILD_ROOT}"/Release/test_measure --impl=cbbst --ring-size=134217728 --ratios=1,1,1,1,1,1 >cbbst.out 2>&1
     ls -l "${test_root}"/map-*-* >"${test_root}/cbbst_used_maps"
     rm "${test_root}"/map-*-*
@@ -267,6 +274,19 @@ function generate_map_latency_plots()
     "${SCRIPTS_ROOT}"/plot_measure.py stdmap.out cbbst.out
 
     popd
+}
+
+
+function generate_stat_summary()
+{
+    # This generates a file consisting of "key<space>value" lines which can
+    # consumed and rendered into a tabular format by perf_diff_to_html_table.py
+
+    {
+        echo "__NAME__ ${RUN_NAME}"
+        echo "__PATCH__ ${SUITE_ROOT}/patch"
+        _summarize_perf <"${SUITE_ROOT}"/map_latency/cbbst_perf0.out |sed 's/^/CBBST:/'
+    } >"${SUITE_ROOT}"/stat_summary
 }
 
 
@@ -303,7 +323,7 @@ function generate_toplevel_html()
             <h2>cb_bst_delete() Flamegraph</h2>
                 <object data="map_flamegraphs/flame.cb_bst_delete.svg" type="image/svg+xml" width="100%"></object>
             <h2>perf stat comparison</h2>
-            $("${SCRIPTS_ROOT}"/perf_diff_to_html_table.py stdmap "${SUITE_ROOT}"/map_latency/stdmap_perf.out cb_bst "${SUITE_ROOT}"/map_latency/cbbst_perf.out)
+            $("${SCRIPTS_ROOT}"/perf_diff_to_html_table.py "${SUITE_ROOT}"/map_latency/stdmap_perf.out "${SUITE_ROOT}"/map_latency/cbbst_perf.out)
         </body>
         </html>
 EOF
@@ -376,6 +396,9 @@ generate_map_flamegraphs
 
 # Generate map latency plots.
 generate_map_latency_plots
+
+# Generate statistics summary.
+generate_stat_summary
 
 # Generate HTML entry point.
 generate_toplevel_html
