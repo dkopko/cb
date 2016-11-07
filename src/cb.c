@@ -192,14 +192,16 @@ struct cb_params CB_PARAMS_DEFAULT =
     };
 
 
-CB_INLINE cb_offset_t offset_aligned_gte(cb_offset_t start, size_t alignment)
+CB_INLINE cb_offset_t
+offset_aligned_gte(cb_offset_t start, size_t alignment)
 {
     cb_assert(is_power_of_2_size(alignment));
     return ((start - 1) | (alignment - 1)) + 1;
 }
 
 
-CB_INLINE void cb_validate(const struct cb *cb)
+CB_INLINE void
+cb_validate(const struct cb *cb)
 {
     (void)cb;
 
@@ -225,7 +227,8 @@ CB_INLINE void cb_validate(const struct cb *cb)
 }
 
 /*FIXME consolidate with cb_validate(), in a way usable from cb_map. */
-void cb_validate2(const struct cb *cb)
+void
+cb_validate2(const struct cb *cb)
 {
     cb_validate(cb);
 }
@@ -235,7 +238,8 @@ extern inline int cb_offset_cmp(cb_offset_t lhs, cb_offset_t rhs);
 extern inline bool cb_offset_lte(cb_offset_t lhs, cb_offset_t rhs);
 
 
-static size_t ring_size_gte(size_t min_ring_size, size_t page_size)
+static size_t
+ring_size_gte(size_t min_ring_size, size_t page_size)
 {
     size_t ring_size;
 
@@ -274,7 +278,8 @@ static size_t ring_size_gte(size_t min_ring_size, size_t page_size)
 }
 
 
-int cb_module_init(void)
+int
+cb_module_init(void)
 {
     long ret;
 
@@ -294,7 +299,8 @@ int cb_module_init(void)
 }
 
 
-struct cb* cb_create(struct cb_params *in_params, size_t in_params_len)
+struct cb*
+cb_create(struct cb_params *in_params, size_t in_params_len)
 {
     struct cb *cb = NULL;
     struct cb_params params = CB_PARAMS_DEFAULT;
@@ -545,7 +551,8 @@ fail:
 }
 
 
-void cb_destroy(struct cb *cb)
+void
+cb_destroy(struct cb *cb)
 {
     int ret;
 
@@ -565,9 +572,11 @@ void cb_destroy(struct cb *cb)
 }
 
 
-void cb_memcpy_out_short(void *dest,
-                         const struct cb *cb, cb_offset_t offset,
-                         size_t len)
+void
+cb_memcpy_out_short(void            *dest,
+                    const struct cb *cb,
+                    cb_offset_t      offset,
+                    size_t           len)
 {
     /* Simple write, must be contiguous due to loop pages. */
     cb_assert(len < cb_loop_size(cb));
@@ -575,9 +584,11 @@ void cb_memcpy_out_short(void *dest,
 }
 
 
-void cb_memcpy_out(void *dest,
-                   const struct cb *cb, cb_offset_t offset,
-                   size_t len)
+void
+cb_memcpy_out(void            *dest,
+              const struct cb *cb,
+              cb_offset_t      offset,
+              size_t           len)
 {
     void *src_start, *src_end, *ring_start, *ring_end;
     size_t upper_frag_len, lower_frag_len;
@@ -615,9 +626,11 @@ void cb_memcpy_out(void *dest,
 }
 
 
-void cb_memcpy_in_short(struct cb *cb, cb_offset_t offset,
-                        const void *src,
-                        size_t len)
+void
+cb_memcpy_in_short(struct cb   *cb,
+                   cb_offset_t  offset,
+                   const void  *src,
+                   size_t       len)
 {
     /* Simple write, must be contiguous due to loop pages. */
     cb_assert(len < cb_loop_size(cb));
@@ -625,9 +638,11 @@ void cb_memcpy_in_short(struct cb *cb, cb_offset_t offset,
 }
 
 
-void cb_memcpy_in(struct cb *cb, cb_offset_t offset,
-                  const void *src,
-                  size_t len)
+void
+cb_memcpy_in(struct cb   *cb,
+             cb_offset_t  offset,
+             const void  *src,
+             size_t       len)
 {
     void *dest_start, *dest_end, *ring_start, *ring_end;
     size_t upper_frag_len, lower_frag_len;
@@ -667,9 +682,12 @@ void cb_memcpy_in(struct cb *cb, cb_offset_t offset,
 }
 
 
-void cb_memcpy(struct cb *dest_cb, cb_offset_t dest_offset,
-               const struct cb *src_cb, cb_offset_t src_offset,
-               size_t len)
+void
+cb_memcpy(struct cb       *dest_cb,
+          cb_offset_t      dest_offset,
+          const struct cb *src_cb,
+          cb_offset_t      src_offset,
+          size_t           len)
 {
     void *src_start, *src_end, *dest_start, *dest_end;
     size_t dest_upper_frag_len, src_upper_frag_len;
@@ -733,7 +751,9 @@ void cb_memcpy(struct cb *dest_cb, cb_offset_t dest_offset,
 }
 
 
-int cb_resize(struct cb **cb, size_t requested_ring_size)
+int
+cb_resize(struct cb **cb,
+          size_t      requested_ring_size)
 {
     struct cb_params new_params;
     struct cb *new_cb;
@@ -798,7 +818,9 @@ int cb_resize(struct cb **cb, size_t requested_ring_size)
 }
 
 
-int cb_grow(struct cb **cb, size_t min_ring_size)
+int
+cb_grow(struct cb **cb,
+        size_t      min_ring_size)
 {
     size_t request_ring_size;
 
@@ -826,7 +848,9 @@ int cb_grow(struct cb **cb, size_t min_ring_size)
 }
 
 
-int cb_shrink(struct cb **cb, size_t min_ring_size)
+int
+cb_shrink(struct cb **cb,
+          size_t      min_ring_size)
 {
     size_t request_ring_size;
 
@@ -854,13 +878,17 @@ int cb_shrink(struct cb **cb, size_t min_ring_size)
 }
 
 
-int cb_shrink_auto(struct cb **cb)
+int
+cb_shrink_auto(struct cb **cb)
 {
     return cb_shrink(cb, cb_data_size(*cb));
 }
 
 
-int cb_append(struct cb **cb, void *p, size_t len)
+int
+cb_append(struct cb **cb,
+          void       *p,
+          size_t      len)
 {
     int ret;
 
@@ -876,10 +904,11 @@ int cb_append(struct cb **cb, void *p, size_t len)
 }
 
 
-int cb_memalign(struct cb **cb,
-                cb_offset_t *offset,
-                size_t alignment,
-                size_t size)
+int
+cb_memalign(struct cb   **cb,
+            cb_offset_t  *offset,
+            size_t        alignment,
+            size_t        size)
 {
     /*
      * NOTE: Allocations of size <= loop_size are guaranteed to be contiguous.
