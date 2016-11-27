@@ -245,7 +245,7 @@ function generate_map_latency_plots()
 {
     local test_root="${SUITE_ROOT}/map_latency"
     local outfile="${test_root}/out"
-    local perfevents=$(perf list --raw-dump)
+    local perfevents=$(perf list --raw-dump |tr ' ' '\n' |grep -v sdt_)
     local perfstatargs=$(for i in ${perfevents}; do printf -- " -e $i"; done)
 
     mkdir "${test_root}"
