@@ -82,12 +82,12 @@ def print_html():
         print '<tr>'
         print '<td>', e, '</td>'
         # Print origin column
-        origin_val = float(eventdata[loaded_filenames[0]][e])
+        origin_val = float(eventdata[loaded_filenames[0]][e]) if e in eventdata[loaded_filenames[0]] else 0.0
         print('<td>%0.1e</td>' % (origin_val))
         # Print delta columns
         for f in loaded_filenames[1:]:
-            new_val = float(eventdata[f][e])
-            pct = (new_val / origin_val) * 100.0 if origin_val != 0 else 0
+            new_val = float(eventdata[f][e]) if e in eventdata[f] else 0.0
+            pct = (new_val / origin_val) * 100.0 if origin_val != 0.0 else 0.0
             if new_val > origin_val:
                 print('<td class="statincr">%0.1e</td><td class="statincr">%0.1f%%</td>' % (new_val, pct))
             else:
