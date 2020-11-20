@@ -19,8 +19,12 @@
 
 #include "cb.h"
 #include "cb_hash.h"
+#include "cb_region.h"
 #include "cb_term.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Immediate version */
 
@@ -37,7 +41,19 @@ enum
 };
 
 int
+cb_bst_init(struct cb               **cb,
+            struct cb_region         *region,
+            cb_offset_t              *new_header_offset_out,
+            cb_term_comparator_t      key_term_cmp,
+            cb_term_comparator_t      value_term_cmp,
+            cb_term_render_t          key_term_render,
+            cb_term_render_t          value_term_render,
+            cb_term_external_size_t   key_term_external_size,
+            cb_term_external_size_t   value_term_external_size);
+
+int
 cb_bst_insert(struct cb            **cb,
+              struct cb_region      *region,
               cb_offset_t           *header_offset,
               cb_offset_t            cutoff_offset,
               const struct cb_term  *key,
@@ -51,6 +67,7 @@ cb_bst_lookup(const struct cb      *cb,
 
 int
 cb_bst_delete(struct cb            **cb,
+              struct cb_region      *region,
               cb_offset_t           *header_offset,
               cb_offset_t            cutoff_offset,
               const struct cb_term  *key);
@@ -75,13 +92,30 @@ cb_bst_print(struct cb   **cb,
              cb_offset_t   header_offset);
 
 int
-cb_bst_cmp(const struct cb *cb,
-           cb_offset_t      lhs_header_offset,
-           cb_offset_t      rhs_header_offset);
+cb_bst_cmp(const struct cb      *cb,
+           cb_offset_t           lhs_header_offset,
+           cb_offset_t           rhs_header_offset);
+
+size_t
+cb_bst_internal_size(const struct cb *cb,
+                     cb_offset_t      header_offset);
+
+size_t
+cb_bst_external_size(const struct cb *cb,
+                     cb_offset_t      header_offset);
+
+int
+cb_bst_external_size_adjust(struct cb   *cb,
+                            cb_offset_t  header_offset,
+                            ssize_t      adjustment);
 
 size_t
 cb_bst_size(const struct cb *cb,
             cb_offset_t      header_offset);
+
+unsigned int
+cb_bst_num_entries(const struct cb *cb,
+                   cb_offset_t      header_offset);
 
 void
 cb_bst_hash_continue(cb_hash_state_t *hash_state,
@@ -105,20 +139,29 @@ cb_bst_to_str(struct cb   **cb,
 
 /*
  * This header structure is used for O(1) maintenance and determinations of
- * cb_bst_size(). The 'total_size' field represents the sum total of the size of
- * this header, the internal nodes, and the external structures rooted at terms
- * within keys or values of this BST.  The 'hash_value' field represents a hash
- * code for all the contained keys and values, but not the internal structure of
- * the BST.  This is because we want two BSTs to have the same hash code if they
- * contain the exact same set of key-value pairs, regardless if their internal
- * structure differs due to the order-of-operations of the key-value pair
- * insertions.
+ * cb_bst_size().  The 'total_internal_size' field represents the sum total of
+ * the size of this header and the internal nodes. The 'total_external_size'
+ * field represents the sum total of the size of the external structures rooted
+ * at terms within keys or values of this BST.  The 'hash_value' field
+ * represents a hash code for all the contained keys and values, but not the
+ * internal structure of the BST.  This is because we want two BSTs to have the
+ * same hash code if they contain the exact same set of key-value pairs,
+ * regardless if their internal structure differs due to the order-of-operations
+ * of the key-value pair insertions.
  */
 struct cb_bst_header
 {
-    size_t      total_size;
-    cb_hash_t   hash_value;
-    cb_offset_t root_node_offset;
+    size_t                  total_internal_size;
+    size_t                  total_external_size;
+    unsigned int            num_entries;
+    cb_hash_t               hash_value;
+    cb_term_comparator_t    key_term_cmp;
+    cb_term_comparator_t    value_term_cmp;
+    cb_term_render_t        key_term_render;
+    cb_term_render_t        value_term_render;
+    cb_term_external_size_t key_term_external_size;
+    cb_term_external_size_t value_term_external_size;
+    cb_offset_t             root_node_offset;
 };
 
 
@@ -154,6 +197,53 @@ cb_bst_header_at(const struct cb *cb,
     return (struct cb_bst_header*)cb_at(cb, header_offset);
 }
 
+CB_INLINE cb_term_comparator_t
+cb_bst_key_cmp_get(const struct cb *cb,
+                   cb_offset_t      header_offset)
+{
+    struct cb_bst_header *header = cb_bst_header_at(cb, header_offset);
+
+    if (!header)
+      return &cb_term_cmp;
+
+    return header->key_term_cmp;
+}
+
+CB_INLINE cb_term_render_t
+cb_bst_key_render_get(const struct cb *cb,
+                      cb_offset_t      header_offset)
+{
+    struct cb_bst_header *header = cb_bst_header_at(cb, header_offset);
+
+    if (!header)
+      return &cb_term_render;
+
+    return header->key_term_render;
+}
+
+CB_INLINE cb_term_render_t
+cb_bst_value_render_get(const struct cb *cb,
+                        cb_offset_t      header_offset)
+{
+    struct cb_bst_header *header = cb_bst_header_at(cb, header_offset);
+
+    if (!header)
+      return &cb_term_render;
+
+    return header->value_term_render;
+}
+
+CB_INLINE cb_term_external_size_t
+cb_bst_key_term_external_size_get(const struct cb *cb,
+                                  cb_offset_t      header_offset)
+{
+    struct cb_bst_header *header = cb_bst_header_at(cb, header_offset);
+
+    if (!header)
+      return NULL;
+
+    return header->key_term_external_size;
+}
 
 CB_INLINE struct cb_bst_node*
 cb_bst_node_at(const struct cb *cb,
@@ -190,7 +280,6 @@ cb_bst_get_iter_start(const struct cb    *cb,
     }
 
     curr_node_offset = cb_bst_header_at(cb, header_offset)->root_node_offset;
-    cb_assert(curr_node_offset != CB_BST_SENTINEL);
 
     iter->count = 0;
     while (curr_node_offset != CB_BST_SENTINEL)
@@ -261,5 +350,9 @@ cb_bst_iter_visit(const struct cb          *cb,
     curr_node = cb_bst_node_at(cb, iter->path_node_offset[iter->count - 1]);
     return func(&(curr_node->key), &(curr_node->value), closure);
 }
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif /* ! defined _CB_BST_H_*/

@@ -147,6 +147,7 @@ static struct map_impl stdmap_impl = {
 struct cbbst_state
 {
     struct cb        *cb;
+    struct cb_region  region;
     struct cb_params  params;
     cb_offset_t root;
 };
@@ -223,6 +224,18 @@ static void* cbbst_create(int argc, char **argv)
         return NULL;
     }
 
+    ret = cb_region_create(&(state->cb),
+                           &(state->region),
+                           1,    //FIXME
+                           1024, //FIXME
+                           0);
+    if (ret != CB_SUCCESS)
+    {
+        //FIXME cleanup state->cb
+        return NULL;
+    }
+
+
     state->root = CB_BST_SENTINEL;
 
     return state;
@@ -266,6 +279,7 @@ static void cbbst_handle_events(struct event *events,
                 cb_term_set_u64(&value, e->insert.v);
                 e->t0 = getticks();
                 ret = cb_bst_insert(&(state->cb),
+                                    &(state->region),
                                     &(state->root),
                                     0,
                                     &key,
@@ -281,6 +295,7 @@ static void cbbst_handle_events(struct event *events,
                 cb_term_set_u64(&key, e->remove.k);
                 e->t0 = getticks();
                 ret = cb_bst_delete(&(state->cb),
+                                    &(state->region),
                                     &(state->root),
                                     0,
                                     &key);

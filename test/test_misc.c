@@ -10,12 +10,12 @@
  */
 /*FIXME improve implementation. */
 CB_INLINE size_t
-power_of_2_size_gt_simple(size_t x)
+power_of_2_gt_size_simple(size_t x)
 {
     size_t result = 0;
     while (x) { result |= x; x >>= 1; }
     result += 1;
-    assert(is_power_of_2_size(result));
+//assert(is_power_of_2_size(result));
     return result;
 }
 
@@ -74,8 +74,8 @@ wtf(void)
 
     for (size_t i = 0; i < sizeof(arr) / sizeof(arr[0]); ++i)
     {
-        size_t v0 = power_of_2_size_gt_simple(arr[i]);
-        size_t v1 = power_of_2_size_gt(arr[i]);
+        size_t v0 = power_of_2_gt_size_simple(arr[i]);
+        size_t v1 = power_of_2_gt_size(arr[i]);
 
         printf("v0: 0x%016jx\n", (uintmax_t)v0);
         printf("v1: 0x%016jx\n", (uintmax_t)v1);
@@ -104,27 +104,65 @@ wtf2(void)
 
 
 static void
-test_power_of_2_size_gt(void)
+test_power_of_2_gt_size_old(void)
 {
-    printf("power_of_2_size_gt(%zu): %zu\n", (size_t)0, power_of_2_size_gt(0));
-    printf("power_of_2_size_gt_simple(%zu): %zu\n", (size_t)0, power_of_2_size_gt_simple(0));
+    printf("DANDEBUG0\n");
+    printf("power_of_2_gt_size(%zu): %zu\n", (size_t)0, power_of_2_gt_size(0));
+    printf("power_of_2_gt_size_simple(%zu): %zu\n", (size_t)0, power_of_2_gt_size_simple(0));
 
-    printf("power_of_2_size_gt(%zu): %zu\n", (size_t)1, power_of_2_size_gt(1));
-    printf("power_of_2_size_gt_simple(%zu): %zu\n", (size_t)1, power_of_2_size_gt_simple(1));
+    printf("DANDEBUG1\n");
+    printf("power_of_2_gt_size(%zu): %zu\n", (size_t)1, power_of_2_gt_size(1));
+    printf("power_of_2_gt_size_simple(%zu): %zu\n", (size_t)1, power_of_2_gt_size_simple(1));
 
-    printf("power_of_2_size_gt(%zu): %zu\n", (size_t)3, power_of_2_size_gt(3));
-    printf("power_of_2_size_gt_simple(%zu): %zu\n", (size_t)3, power_of_2_size_gt_simple(3));
+    printf("DANDEBUG2\n");
+    printf("power_of_2_gt_size(%zu): %zu\n", (size_t)3, power_of_2_gt_size(3));
+    printf("power_of_2_gt_size_simple(%zu): %zu\n", (size_t)3, power_of_2_gt_size_simple(3));
 
-    printf("power_of_2_size_gt(%zu): %zu\n", (size_t)SIZE_MAX/2, power_of_2_size_gt(SIZE_MAX/2));
-    printf("power_of_2_size_gt_simple(%zu): %zu\n", (size_t)SIZE_MAX/2, power_of_2_size_gt_simple(SIZE_MAX/2));
+    printf("DANDEBUG3\n");
+    printf("power_of_2_gt_size(%zu): %zu\n", (size_t)SIZE_MAX/2, power_of_2_gt_size(SIZE_MAX/2));
+    printf("power_of_2_gt_size_simple(%zu): %zu\n", (size_t)SIZE_MAX/2, power_of_2_gt_size_simple(SIZE_MAX/2));
 
-    printf("power_of_2_size_gt(%zu): %zu\n", (size_t)SIZE_MAX - 5, power_of_2_size_gt(SIZE_MAX - 5));
-    printf("power_of_2_size_gt_simple(%zu): %zu\n", (size_t)SIZE_MAX - 5, power_of_2_size_gt_simple(SIZE_MAX - 5));
+    printf("DANDEBUG4\n");
+    printf("power_of_2_gt_size(%zu): %zu\n", (size_t)SIZE_MAX - 5, power_of_2_gt_size(SIZE_MAX - 5));
+    printf("power_of_2_gt_size_simple(%zu): %zu\n", (size_t)SIZE_MAX - 5, power_of_2_gt_size_simple(SIZE_MAX - 5));
 
-    printf("power_of_2_size_gt(%zu): %zu\n", (size_t)SIZE_MAX - 1, power_of_2_size_gt(SIZE_MAX - 1));
-    printf("power_of_2_size_gt_simple(%zu): %zu\n", (size_t)SIZE_MAX - 1, power_of_2_size_gt_simple(SIZE_MAX - 1));
+    printf("DANDEBUG5\n");
+    printf("power_of_2_gt_size(%zu): %zu\n", (size_t)SIZE_MAX - 1, power_of_2_gt_size(SIZE_MAX - 1));
+    printf("power_of_2_gt_size_simple(%zu): %zu\n", (size_t)SIZE_MAX - 1, power_of_2_gt_size_simple(SIZE_MAX - 1));
 }
 
+
+static void
+test_is_power_of_2(void)
+{
+    for (uintmax_t i = 0; i < 33; ++i)
+        printf("is_power_of_2(%ju): %d\n", i, is_power_of_2(i));
+
+    for (uintmax_t i = UINTMAX_MAX - 8; i != 0; ++i)
+        printf("is_power_of_2(%ju): %d\n", i, is_power_of_2(i));
+}
+
+
+static void
+test_power_of_2_gt(void)
+{
+    for (uintmax_t i = 0; i < 33; ++i)
+        printf("power_of_2_gt(%ju): %ju\n", i, power_of_2_gt(i));
+
+    for (uintmax_t i = UINTMAX_MAX - 8; i != 0; ++i)
+        printf("power_of_2_gt(%ju): %ju\n", i, power_of_2_gt(i));
+}
+
+
+static void
+test_power_of_2_gte(void)
+{
+    for (uintmax_t i = 0; i < 33; ++i)
+        printf("power_of_2_gte(%ju): %ju\n", i, power_of_2_gte(i));
+
+    for (uintmax_t i = UINTMAX_MAX - 8; i != 0; ++i)
+        printf("power_of_2_gte(%ju): %ju\n", i, power_of_2_gte(i));
+}
 
 int
 main(int argc, char **argv)
@@ -132,7 +170,10 @@ main(int argc, char **argv)
     (void)argc, (void)argv;
 
     test_mask_below_bit();
-    //test_power_of_2_size_gt();
+    test_power_of_2_gt_size_old();
+    test_is_power_of_2();
+    test_power_of_2_gt();
+    test_power_of_2_gte();
     //wtf();
     //wtf2();
 

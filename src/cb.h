@@ -18,6 +18,7 @@
 #define _CB_H_
 
 #include "cb_assert.h"
+#include "cb_bits.h"
 #include "cb_log.h"
 #include "cb_misc.h"
 
@@ -35,26 +36,44 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef uintptr_t cb_mask_t;
 typedef uintptr_t cb_offset_t;
 enum { CB_OFFSET_MAX = UINTPTR_MAX };
 
+struct cb;
+typedef void (*cb_on_resize_t)(struct cb *old_cb, struct cb *new_cb);
+
+//FIXME extend with other errors and use everywhere
+enum cb_error
+{
+    CB_SUCCESS  =  0,
+    CB_FAILURE  = -1,
+    CB_BADPARAM = -2,
+    CB_DEPLETED = -3
+};
+
 
 struct cb_params
 {
-    size_t        ring_size;
-    size_t        loop_size;
-    unsigned int  index;
-    unsigned int  flags;
-    int           open_flags;
-    mode_t        open_mode;
-    int           mmap_prot;
-    int           mmap_flags;
-    char          filename_prefix[64];
+    size_t          ring_size;
+    size_t          loop_size;
+    unsigned int    index;
+    unsigned int    flags;
+    int             open_flags;
+    mode_t          open_mode;
+    int             mmap_prot;
+    int             mmap_flags;
+    char            filename_prefix[64];
+    cb_on_resize_t  on_resize;
 };
 
 #define CB_PARAMS_F_LEAVE_FILES (1 << 0)
+#define CB_PARAMS_F_PREFAULT    (1 << 1)
+#define CB_PARAMS_F_MLOCK       (1 << 2)
 
 
 extern struct cb_params CB_PARAMS_DEFAULT;
@@ -179,7 +198,6 @@ cb_memcpy_in(struct cb   *cb,
              const void  *src,
              size_t       len);
 
-
 /*
  * Copies memory from continuous buffer 'src_cb' starting at offset 'src_offset'
  * into continuous buffer 'dest_cb' at offset 'dest_offset'.  Memory is of size
@@ -191,6 +209,17 @@ cb_memcpy(struct cb       *dest_cb,
           const struct cb *src_cb,
           cb_offset_t      src_offset,
           size_t           len);
+
+
+/*
+ * Sets memory within continuous buffer to char 'c', starting at offset
+ * 'offset' and continuing for 'len' bytes.
+ */
+void
+cb_memset(struct cb   *cb,
+          cb_offset_t  offset,
+          char         c,
+          size_t       len);
 
 
 /*
@@ -250,6 +279,39 @@ cb_memalign(struct cb   **cb,
             cb_offset_t  *offset,
             size_t        alignment,
             size_t        size);
+
+
+/*
+ * Returns the next offset greater than or equal to start which has the
+ * specified alignment.
+ */
+CB_INLINE cb_offset_t
+cb_offset_aligned_gte(cb_offset_t start, size_t alignment)
+{
+    cb_assert(is_power_of_2_size(alignment));
+    return ((start - 1) | (alignment - 1)) + 1;
+}
+
+
+/*
+ * Returns the largest offset less than start which has the specified alignment.
+ */
+CB_INLINE cb_offset_t
+cb_offset_aligned_lt(cb_offset_t start, size_t alignment)
+{
+    return cb_offset_aligned_gte(start - alignment, alignment);
+}
+
+
+/*
+ * Returns the largest offset less than or equal to start which has the
+ * specified alignment.
+ */
+CB_INLINE cb_offset_t
+cb_offset_aligned_lte(cb_offset_t start, size_t alignment)
+{
+    return cb_offset_aligned_gte(start - (alignment - 1), alignment);
+}
 
 
 /*
@@ -339,6 +401,28 @@ cb_data_size(const struct cb *cb)
     return cb->cursor - cb->data_start;
 }
 
+/*
+ * Returns the start of data offset within the continous buffer 'cb'.
+ */
+CB_INLINE cb_offset_t
+cb_start(const struct cb *cb)
+{
+    return cb->data_start;
+}
+
+
+/*
+ * Advances the start of data offset by len bytes.
+ */
+CB_INLINE void
+cb_start_advance(struct cb *cb, size_t len)
+{
+    /* new start location <= data_end */
+    cb_assert(cb_offset_cmp(cb->data_start + len, cb->data_start + cb_ring_size(cb)) < 1);
+
+    cb->data_start += len;
+}
+
 
 /*
  * Returns the offset of the cursor within the continous buffer 'cb'.  Note that
@@ -392,6 +476,20 @@ cb_free_size(const struct cb *cb)
 }
 
 
+CB_INLINE cb_mask_t
+cb_ring_mask(const struct cb *cb)
+{
+    return cb->mask;
+}
+
+CB_INLINE void*
+cb_at_immed(void        *ring_start,
+            cb_mask_t    ring_mask,
+            cb_offset_t  offset)
+{
+    return (char*)ring_start + (offset & ring_mask);
+}
+
 /*
  * Returns a raw pointer to the area of memory presently holding the data of
  * continous buffer 'cb' at offset 'offset'.
@@ -406,29 +504,48 @@ cb_at(const struct cb *cb,
     /* offset <= data_end */
     cb_assert(cb_offset_cmp(offset, cb->data_start + cb_ring_size(cb)) < 1);
 
-    return (char*)cb_ring_start(cb) + (offset & cb->mask);
+    return cb_at_immed(cb_ring_start(cb), cb_ring_mask(cb), offset);
 }
 
 
-#if 0
+CB_INLINE bool
+cb_within_ring(const struct cb *cb,
+               const void      *addr)
+{
+    return (const char *)addr >= (const char *)cb_ring_start(cb)
+        && (const char *)addr < (const char *)cb_ring_end(cb);
+}
+
 /*
- * Attempts to translate a raw pointer to an offset within the continous buffer
- * 'cb'.  However, there is ambiguity here, as a given raw address may
- * represent many offsets within the continous buffer, as the offsets wrap
- * around the ring to occupy the same raw memory locations as earlier offsets
- * (modulo the ring size).  The use of this function in general should be
- * avoided.
+ * Translate a raw pointer to an offset within the continous buffer 'cb'.
+ * There is ambiguity here, as a given raw address may represent many offsets
+ * within the continous buffer, as the offsets wrap around the ring to occupy
+ * the same raw memory locations as earlier offsets (modulo the ring size).
+ * The use of this function in general should be avoided.
  */
 CB_INLINE cb_offset_t
 cb_from(const struct cb *cb,
         const void      *addr)
 {
-    cb_assert((char*)addr >= (char*)cb_ring_start(cb));
-    cb_assert((char*)addr <= (char*)cb_ring_end(cb));
+    cb_assert(cb_within_ring(cb, addr));
 
-    return cb->data_start + ((char*)addr - (char*)cb_ring_start(cb));
+    const char *data_start_addr = (const char *)cb_at(cb, cb->data_start);
+    const char *data_end_addr = (const char *)cb_at(cb, cb->data_start + cb_data_size(cb));
+
+    if (data_start_addr < data_end_addr) {
+        /* Continuous data region */
+        return cb->data_start + (cb_offset_t)((const char *)addr - data_start_addr);
+    } else {
+        /* Discontinuous data region */
+        if ((const char *)addr > data_start_addr) {
+            /* addr is in the lower-offset, higher address portion */
+            return cb->data_start + (cb_offset_t)((const char *)addr - data_start_addr);
+        } else {
+            /* addr is in the higher-offset, lower address portion */
+            return (cb_offset_t)((char *)cb_ring_end(cb) - data_start_addr) + (cb_offset_t)((const char *)addr - (char *)cb_ring_start(cb));
+        }
+    }
 }
-#endif
 
 
 /*
@@ -572,5 +689,10 @@ cb_ensure_free_contiguous(struct cb **cb,
 grow:
     return cb_grow(cb, cb_ring_size(*cb) + len);
 }
+
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif /* ! defined _CB_H_*/

@@ -184,20 +184,13 @@ struct cb_params CB_PARAMS_DEFAULT =
         .ring_size = 0,
         .loop_size = 0,
         .index = 0,
+        .flags = 0,
         .open_flags = O_RDWR | O_CREAT | O_TRUNC,
         .open_mode = S_IRUSR | S_IWUSR,
         .mmap_prot = PROT_READ | PROT_WRITE,
-        .mmap_flags = MAP_SHARED | MAP_ANONYMOUS,
+        .mmap_flags = MAP_SHARED | MAP_ANONYMOUS | MAP_POPULATE,
         .filename_prefix = "map"
     };
-
-
-CB_INLINE cb_offset_t
-offset_aligned_gte(cb_offset_t start, size_t alignment)
-{
-    cb_assert(is_power_of_2_size(alignment));
-    return ((start - 1) | (alignment - 1)) + 1;
-}
 
 
 CB_INLINE void
@@ -265,7 +258,7 @@ ring_size_gte(size_t min_ring_size, size_t page_size)
 
     if (!is_power_of_2_size(ring_size))
     {
-        size_t new_ring_size = power_of_2_size_gt(ring_size);
+        size_t new_ring_size = power_of_2_gt_size(ring_size);
         cb_log_debug("%zu not a power of 2, increasing to %zu.",
                      ring_size, new_ring_size);
         ring_size = new_ring_size;
@@ -512,6 +505,23 @@ mmap_retry:
     cb->stat_wastage = 0;
     cb_assert(loopmem == cb_ring_end(cb));
 
+    /* mlock() ring pages. */
+    if (cb->params.flags & CB_PARAMS_F_MLOCK)
+    {
+        ret = mlock(cb, header_size);
+        if (ret == -1)
+            cb_log_errno("mlock(%d) failed.", fd);
+    }
+
+    /* Prefault ring pages. */
+    if (cb->params.flags & CB_PARAMS_F_PREFAULT)
+        for (char *c = (char *)cb_ring_start(cb), *e = (char *)cb_ring_end(cb);
+             c < e;
+             c += page_size)
+        {
+            *c = 0xD;
+        }
+
     return cb;
 
 fail:
@@ -564,6 +574,13 @@ cb_destroy(struct cb *cb)
         ret = unlink(cb->filename);
         if (ret == -1)
             cb_log_errno("unlink(%s) failed.", cb->filename);
+    }
+
+    if (cb->params.flags & CB_PARAMS_F_MLOCK)
+    {
+        ret = munlock(cb, cb->header_size);
+        if (ret == -1)
+            cb_log_errno("munlock() failed.");
     }
 
     ret = munmap(cb, cb->header_size + cb_ring_size(cb) + cb_loop_size(cb));
@@ -751,6 +768,44 @@ cb_memcpy(struct cb       *dest_cb,
 }
 
 
+void
+cb_memset(struct cb   *cb,
+          cb_offset_t  offset,
+          char         c,
+          size_t       len)
+{
+    void *dest_start, *dest_end, *ring_start, *ring_end;
+    size_t upper_frag_len, lower_frag_len;
+
+    cb_validate(cb);
+
+    /*
+     * This function shouldn't resize, nor should it be expected to handle
+     * wrap-around writes which overlap with themselves.
+     */
+    cb_assert(len <= cb_ring_size(cb));
+
+    dest_start = cb_at(cb, offset);
+    dest_end   = cb_at(cb, offset + len);
+
+    if (dest_start < dest_end)
+    {
+        /* Simple write, contiguous. */
+        memset(dest_start, c, len);
+        return;
+    }
+
+    /* Discontiguous write, write in two pieces. */
+    ring_start = cb_ring_start(cb);
+    ring_end   = cb_ring_end(cb);
+    upper_frag_len = (char *)ring_end - (char *)dest_start;
+    lower_frag_len = len - upper_frag_len;
+
+    memset(dest_start, c, upper_frag_len);
+    memset(ring_start, c, lower_frag_len);
+}
+
+
 int
 cb_resize(struct cb **cb,
           size_t      requested_ring_size)
@@ -811,6 +866,9 @@ cb_resize(struct cb **cb,
     cb_memcpy(new_cb, (*cb)->data_start,
               *cb, (*cb)->data_start,
               cb_data_size(*cb));
+
+    if ((*cb)->params.on_resize)
+        (*cb)->params.on_resize(*cb, new_cb);
 
     *cb = new_cb;
 
@@ -929,10 +987,9 @@ cb_memalign(struct cb   **cb,
     cb_offset_t start_offset;
     int ret;
 
-    if (!is_power_of_2_size(alignment))
-        return -1;
+    alignment = power_of_2_gte_size(alignment);
 
-    start_offset = offset_aligned_gte((*cb)->cursor, alignment);
+    start_offset = cb_offset_aligned_gte((*cb)->cursor, alignment);
 
     ret = cb_ensure_to(cb, start_offset + size);
     if (ret != 0)

@@ -112,7 +112,7 @@ bits_at(uint64_t src, uint64_t count, uint64_t pos)
 CB_INLINE bool
 is_power_of_2(uintmax_t x)
 {
-    return (x > 0) & ((x ^ (x - 1)) == (x | (x - 1)));
+    return (x > 0) & !(x & (x - 1));
 }
 
 
@@ -122,7 +122,53 @@ is_power_of_2(uintmax_t x)
 CB_INLINE bool
 is_power_of_2_size(size_t x)
 {
-    return (x > 0) & ((x ^ (x - 1)) == (x | (x - 1)));
+    return (x > 0) & !(x & (x - 1));
+}
+
+
+/*
+ * Returns the smallest power of 2 greater than 'x'.
+ */
+CB_INLINE uintmax_t
+power_of_2_gt(uintmax_t x)
+{
+    uintmax_t result;
+    result = ((uintmax_t)1) << ((sizeof(uintmax_t) * 8) - clz64(x));
+    cb_assert(is_power_of_2(result));
+    return result;
+}
+
+
+/*
+ * Returns the smallest power of 2 greater than 'x'.
+ */
+CB_INLINE size_t
+power_of_2_gt_size(size_t x)
+{
+    size_t result;
+    result = ((size_t)1) << ((sizeof(size_t) * 8) - clz64(x));
+    cb_assert(is_power_of_2(result));
+    return result;
+}
+
+
+/*
+ * Returns the smallest power of 2 greater than or equal to 'x'.
+ */
+CB_INLINE uintmax_t
+power_of_2_gte(uintmax_t x)
+{
+    return power_of_2_gt(x - 1);
+}
+
+
+/*
+ * Returns the smallest power of 2 greater than or equal to 'x'.
+ */
+CB_INLINE size_t
+power_of_2_gte_size(size_t x)
+{
+    return power_of_2_gt_size(x - 1);
 }
 
 
@@ -133,29 +179,6 @@ mask_below_bit(uint8_t x)
         return (uintmax_t)-1;
 
     return ((uintmax_t)1 << x) - 1;
-}
-
-
-/*
- * Returns the lowest power of 2 size_t which is greater than 'x'.
- */
-CB_INLINE size_t
-power_of_2_size_gt(size_t x)
-{
-    size_t result = mask_below_bit(64 - clz64(x)) + 1;
-    cb_assert(is_power_of_2_size(result));
-    return result;
-}
-
-/*
- * Returns the lowest power of 2 size_t which is greater than or equal to 'x'.
- */
-CB_INLINE size_t
-power_of_2_size_gte(size_t x)
-{
-    size_t result = (is_power_of_2_size(x) ? x : power_of_2_size_gt(x));
-    cb_assert(is_power_of_2_size(result));
-    return result;
 }
 
 

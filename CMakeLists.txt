@@ -13,6 +13,7 @@ set(CB_SOURCES
   "${CMAKE_SOURCE_DIR}/src/cb_map.c"
   "${CMAKE_SOURCE_DIR}/src/cb_print.c"
   "${CMAKE_SOURCE_DIR}/src/cb_random.c"
+  "${CMAKE_SOURCE_DIR}/src/cb_region.c"
   "${CMAKE_SOURCE_DIR}/src/cb_structmap.c"
   "${CMAKE_SOURCE_DIR}/src/cb_term.c"
 )
@@ -22,13 +23,13 @@ include_directories(
   "${CMAKE_SOURCE_DIR}/src"
 )
 
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -D_GNU_SOURCE -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-function")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -D_GNU_SOURCE -Wall -Wextra -Werror -Wmissing-declarations -Wno-unused-function")
+# Remove -Wno-array-bounds when xxhash stops breaking in release build with it.
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -D_GNU_SOURCE -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -Wno-unused-function -Wno-array-bounds")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -D_GNU_SOURCE -Wall -Wextra -Werror -Wmissing-declarations -Wno-unused-function -Wno-array-bounds")
 
 # Used for flamegraphs.
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -DCB_ASSERT_ON -DCB_HEAVY_ASSERT_ON")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -DCB_ASSERT_ON -DCB_HEAVY_ASSERT_ON")
 
 # Used for latency graphs.
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -mtune=native")

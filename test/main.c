@@ -84,8 +84,8 @@ test_kv_set(struct cb **cb)
     }
 
     printf("value of key %s is %s\n",
-           cb_term_to_str(cb, &key),
-           cb_term_to_str(cb, &value));
+           cb_term_to_str(cb, &cb_term_render, &key),
+           cb_term_to_str(cb, &cb_term_render, &value));
 
     ret = cb_map_kv_delete(&cb_map, &key);
     assert(ret == 0);
@@ -154,8 +154,8 @@ doprint(const struct cb_term *key, const struct cb_term *value, void *closure)
     int ret;
 
     ret = printf("doprint -- key: %s, value: %s\n",
-                 cb_term_to_str(dpc->cb, key),
-                 cb_term_to_str(dpc->cb, value));
+                 cb_term_to_str(dpc->cb, &cb_term_render, key),
+                 cb_term_to_str(dpc->cb, &cb_term_render, value));
     return (ret < 0 ? ret : 0);
 }
 

@@ -18,6 +18,7 @@
 #define _CB_MAP_H_
 
 #include "cb.h"
+#include "cb_region.h"
 #include "cb_term.h"
 
 
@@ -25,8 +26,9 @@
 
 struct cb_map
 {
-    struct cb   **cb;
-    cb_offset_t   last_command_offset;
+    struct cb        **cb;
+    struct cb_region   region;
+    cb_offset_t        last_command_offset;
 };
 
 int cb_map_init(struct cb_map *cb_map, struct cb **cb);

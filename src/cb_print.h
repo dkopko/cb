@@ -21,6 +21,9 @@
 
 #include <stdarg.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int
 cb_vasprintf(cb_offset_t  *dest_offset,
@@ -33,5 +36,9 @@ cb_asprintf(cb_offset_t  *dest_offset,
             struct cb   **cb,
             const char   *fmt,
             ...);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif /* ! defined _CB_PRINT_H_*/

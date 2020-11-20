@@ -183,16 +183,18 @@ struct cb_command_any
 
 static int
 cb_command_alloc(struct cb             **cb,
+                 struct cb_region       *region,
                  cb_offset_t            *command_offset,
                  struct cb_command_any **command)
 {
     cb_offset_t new_command_offset;
     int ret;
 
-    ret = cb_memalign(cb,
-                      &new_command_offset,
-                      cb_alignof(struct cb_command_any),
-                      sizeof(struct cb_command_any));
+    ret = cb_region_memalign(cb,
+                             region,
+                             &new_command_offset,
+                             cb_alignof(struct cb_command_any),
+                             sizeof(struct cb_command_any));
     if (ret != 0)
         return ret;
 
@@ -210,7 +212,10 @@ cb_start_data_set(struct cb_map *cb_map)
     struct cb_command_any *command;
     int ret;
 
-    ret = cb_command_alloc(cb_map->cb, &command_offset, &command);
+    ret = cb_command_alloc(cb_map->cb,
+                           &(cb_map->region),
+                           &command_offset,
+                           &command);
     if (ret != 0)
         return ret;
 
@@ -226,7 +231,16 @@ cb_start_data_set(struct cb_map *cb_map)
 int
 cb_map_init(struct cb_map *cb_map, struct cb **cb)
 {
+    int ret;
+
     cb_map->cb = cb;
+    ret = cb_region_create(cb,
+                           &(cb_map->region),
+                           cb_alignof(struct cb_command_any),
+                           1024, //FIXME factor out constant
+                           0);
+    if (ret != CB_SUCCESS)
+        return ret;
 
     return cb_start_data_set(cb_map);
 }
@@ -241,7 +255,10 @@ cb_map_kv_set(struct cb_map        *cb_map,
     struct cb_command_any *command;
     int ret;
 
-    ret = cb_command_alloc(cb_map->cb, &command_offset, &command);
+    ret = cb_command_alloc(cb_map->cb,
+                           &(cb_map->region),
+                           &command_offset,
+                           &command);
     if (ret != 0)
         return ret;
 
@@ -316,7 +333,10 @@ cb_map_kv_delete(struct cb_map *cb_map, const struct cb_term *key)
     struct cb_command_any *command;
     int ret;
 
-    ret = cb_command_alloc(cb_map->cb, &command_offset, &command);
+    ret = cb_command_alloc(cb_map->cb,
+                           &(cb_map->region),
+                           &command_offset,
+                           &command);
     if (ret != 0)
         return ret;
 
@@ -358,9 +378,10 @@ cb_map_traverse(struct cb_map          *cb_map,
 
 struct traverse_state
 {
-    struct cb   **cb;
-    cb_offset_t   new_root_node_offset;
-    cb_offset_t   cutoff_offset;
+    struct cb        **cb;
+    struct cb_region  *region;
+    cb_offset_t        new_root_node_offset;
+    cb_offset_t        cutoff_offset;
 };
 
 
@@ -372,6 +393,7 @@ traversal_insert(const struct cb_term *key,
     struct traverse_state *ts = (struct traverse_state *)closure;
 
     return cb_bst_insert(ts->cb,
+                         ts->region,
                          &(ts->new_root_node_offset),
                          ts->cutoff_offset,
                          key,
@@ -390,6 +412,7 @@ traversal_delete(const struct cb_term *key,
     (void)value;
 
     ret = cb_bst_delete(ts->cb,
+                        ts->region,
                         &(ts->new_root_node_offset),
                         ts->cutoff_offset,
                         key);
@@ -445,6 +468,7 @@ cb_map_consolidate_internal(struct cb_map *cb_map)
                                          &(cmd->keyval.key)))
                 {
                     ret = cb_bst_insert(cb_map->cb,
+                                        &(cb_map->region),
                                         &insertions_root_node_offset,
                                         cutoff_offset,
                                         &(cmd->keyval.key),
@@ -461,6 +485,7 @@ cb_map_consolidate_internal(struct cb_map *cb_map)
 
                 /* Add to the deletions BST. */
                 ret = cb_bst_insert(cb_map->cb,
+                                    &(cb_map->region),
                                     &deletions_root_node_offset,
                                     cutoff_offset,
                                     &(cmd->deletekey.key),
@@ -475,6 +500,7 @@ cb_map_consolidate_internal(struct cb_map *cb_map)
                 struct traverse_state ts;
 
                 ts.cb                   = cb_map->cb;
+                ts.region               = &(cb_map->region);
                 ts.new_root_node_offset = cmd->bst.root_node_offset;
                 ts.cutoff_offset        = cutoff_offset;
 
@@ -498,7 +524,10 @@ cb_map_consolidate_internal(struct cb_map *cb_map)
                    its prev pointing past the earlier CB_CMD_BST that we
                    have presently encountered (and which was used as the initial
                    value of the accumulator).  */
-                ret = cb_command_alloc(cb_map->cb, &new_cmd_offset, &new_cmd);
+                ret = cb_command_alloc(cb_map->cb,
+                                       &(cb_map->region),
+                                       &new_cmd_offset,
+                                       &new_cmd);
                 if (ret != 0)
                     goto fail;
 
@@ -511,7 +540,10 @@ cb_map_consolidate_internal(struct cb_map *cb_map)
             case CB_CMD_START_DATA:
             {
                 /* Link to as the new CB_CMD_BST's prev. */
-                ret = cb_command_alloc(cb_map->cb, &new_cmd_offset, &new_cmd);
+                ret = cb_command_alloc(cb_map->cb,
+                                       &(cb_map->region),
+                                       &new_cmd_offset,
+                                       &new_cmd);
                 if (ret != 0)
                     goto fail;
 
@@ -584,8 +616,8 @@ cb_map_print(const struct cb_map *cb_map)
                 const char  *key_str,
                             *val_str;
 
-                key_str = cb_term_to_str(cb_map->cb, &(cmd->keyval.key));
-                val_str = cb_term_to_str(cb_map->cb, &(cmd->keyval.value));
+                key_str = cb_term_to_str(cb_map->cb, &cb_term_render, &(cmd->keyval.key));
+                val_str = cb_term_to_str(cb_map->cb, &cb_term_render, &(cmd->keyval.value));
                 printf("[%ju (+%ju)]\tKEYVAL %s = %s\n",
                        (uintmax_t)cmd_offset,
                        (uintmax_t)(cmd_offset - cmd->prev),
@@ -601,7 +633,7 @@ cb_map_print(const struct cb_map *cb_map)
                 cb_offset_t  orig_cursor_pos = cb_cursor(*(cb_map->cb));
                 const char  *key_str;
 
-                key_str = cb_term_to_str(cb_map->cb, &(cmd->deletekey.key));
+                key_str = cb_term_to_str(cb_map->cb, &cb_term_render, &(cmd->deletekey.key));
                 printf("[%ju (+%ju)]\tDELETEKEY %s\n",
                        (uintmax_t)cmd_offset,
                        (uintmax_t)(cmd_offset - cmd->prev),

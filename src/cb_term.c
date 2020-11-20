@@ -122,12 +122,14 @@ cb_term_render(cb_offset_t           *dest_offset,
 
 
 const char*
-cb_term_to_str(struct cb **cb, const struct cb_term *term)
+cb_term_to_str(struct cb            **cb,
+               cb_term_render_t       render,
+               const struct cb_term  *term)
 {
     cb_offset_t dest_offset;
     int ret;
 
-    ret = cb_term_render(&dest_offset, cb, term, CB_RENDER_DEFAULT);
+    ret = render(&dest_offset, cb, term, CB_RENDER_DEFAULT);
     if (ret != 0)
         return "(render-error)";
 

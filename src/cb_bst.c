@@ -182,6 +182,7 @@ enum
 struct cb_bst_sequence_check_state
 {
     struct cb      **cb;
+    cb_offset_t      header_offset;
     bool             has_prev_key;
     unsigned int     i;
     struct cb_term   prev_key;
@@ -194,6 +195,7 @@ CB_INLINE bool
 cb_bst_node_is_modifiable(cb_offset_t node_offset,
                           cb_offset_t cutoff_offset)
 {
+//FIXME handle reversed regions
     int cmp = cb_offset_cmp(node_offset, cutoff_offset);
     cb_assert(cmp == -1 || cmp == 0 || cmp == 1);
     return cmp > -1;
@@ -239,20 +241,23 @@ cb_bst_sequence_check(const struct cb_term *key,
 {
     struct cb_bst_sequence_check_state *scs =
         (struct cb_bst_sequence_check_state *)closure;
+    struct cb_bst_header *header;
+
+    header = cb_bst_header_at(*(scs->cb), scs->header_offset);
 
     (void)value;
 
     if (scs->do_print)
-        cb_log_debug("bst[%u] = %s.", scs->i, cb_term_to_str(scs->cb, key));
+        cb_log_debug("bst[%u] = %s.", scs->i, cb_term_to_str(scs->cb, header->key_term_render, key));
 
     if (scs->has_prev_key &&
-        cb_term_cmp(*(scs->cb), &(scs->prev_key), key) != -1)
+        header->key_term_cmp(*(scs->cb), &(scs->prev_key), key) != -1)
     {
         if (scs->do_print)
         {
             cb_log_debug("Order violation: %s !< %s",
-                         cb_term_to_str(scs->cb, &(scs->prev_key)),
-                         cb_term_to_str(scs->cb, key));
+                         cb_term_to_str(scs->cb, header->key_term_render, &(scs->prev_key)),
+                         cb_term_to_str(scs->cb, header->key_term_render, key));
         }
 
         scs->failed = true;
@@ -271,11 +276,12 @@ cb_bst_validate_sequence(struct cb   **cb,
                          bool          do_print)
 {
     struct cb_bst_sequence_check_state scs = {
-        .cb           = cb,
-        .has_prev_key = false,
-        .i            = 0,
-        .failed       = false,
-        .do_print     = do_print
+        .cb            = cb,
+        .header_offset = header_offset,
+        .has_prev_key  = false,
+        .i             = 0,
+        .failed        = false,
+        .do_print      = do_print
     };
     int ret;
 
@@ -291,6 +297,9 @@ cb_bst_validate_sequence(struct cb   **cb,
 static bool
 cb_bst_validate_structure(struct cb                        **cb,
                           cb_offset_t                        node_offset,
+                          cb_term_comparator_t               key_term_cmp,
+                          cb_term_render_t                   key_term_render,
+                          cb_term_render_t                   value_term_render,
                           uint32_t                          *tree_height,
                           uint32_t                           validate_depth,
                           bool                               do_print,
@@ -320,8 +329,8 @@ cb_bst_validate_structure(struct cb                        **cb,
                (int)validate_depth, spaces,
                node->color == CB_BST_RED ? "\033[1;31;40m" : "",
                node_offset,
-               cb_term_to_str(cb, &(node->key)),
-               cb_term_to_str(cb, &(node->value)),
+               cb_term_to_str(cb, key_term_render, &(node->key)),
+               cb_term_to_str(cb, value_term_render, &(node->value)),
                node->color == CB_BST_RED ? "RED" : "BLACK",
                (uintmax_t)node->child[0],
                (uintmax_t)node->child[1],
@@ -334,15 +343,15 @@ cb_bst_validate_structure(struct cb                        **cb,
     left_node = cb_bst_node_at(*cb, node->child[0]);
     if (left_node)
     {
-        if (cb_term_cmp(*cb, &(left_node->key), &(node->key)) != -1)
+        if (key_term_cmp(*cb, &(left_node->key), &(node->key)) != -1)
         {
             if (do_print)
                 printf("%*.s\033[1;33;40mnode_offset %ju: left key %s (off: %ju) !< key %s\033[0m\n",
                        (int)validate_depth, spaces,
                        node_offset,
-                       cb_term_to_str(cb, &(left_node->key)),
+                       cb_term_to_str(cb, key_term_render, &(left_node->key)),
                        node->child[0],
-                       cb_term_to_str(cb, &(node->key)));
+                       cb_term_to_str(cb, key_term_render, &(node->key)));
             retval = false;
         }
     }
@@ -350,14 +359,14 @@ cb_bst_validate_structure(struct cb                        **cb,
     right_node = cb_bst_node_at(*cb, node->child[1]);
     if (right_node)
     {
-        if (cb_term_cmp(*cb, &(node->key), &(right_node->key)) != -1)
+        if (key_term_cmp(*cb, &(node->key), &(right_node->key)) != -1)
         {
             if (do_print)
                 printf("%*.s\033[1;33;40mnode_offset %ju: key %s !< right key %s (off:%ju)\033[0m\n",
                        (int)validate_depth, spaces,
                        node_offset,
-                       cb_term_to_str(cb, &(node->key)),
-                       cb_term_to_str(cb, &(right_node->key)),
+                       cb_term_to_str(cb, key_term_render, &(node->key)),
+                       cb_term_to_str(cb, key_term_render, &(right_node->key)),
                        node->child[1]);
             retval = false;
         }
@@ -365,11 +374,14 @@ cb_bst_validate_structure(struct cb                        **cb,
 
     /* Validate left subtree. */
     if (!cb_bst_validate_structure(cb,
-                                  node->child[0],
-                                  &left_height,
-                                  validate_depth + 1,
-                                  do_print,
-                                  s))
+                                   node->child[0],
+                                   key_term_cmp,
+                                   key_term_render,
+                                   value_term_render,
+                                   &left_height,
+                                   validate_depth + 1,
+                                   do_print,
+                                   s))
     {
         retval = false;
     }
@@ -377,6 +389,9 @@ cb_bst_validate_structure(struct cb                        **cb,
     /* Validate right subtree. */
     if (!cb_bst_validate_structure(cb,
                                   node->child[1],
+                                  key_term_cmp,
+                                  key_term_render,
+                                  value_term_render,
                                   &right_height,
                                   validate_depth + 1,
                                   do_print,
@@ -420,6 +435,61 @@ cb_bst_validate_structure(struct cb                        **cb,
     return retval;
 }
 
+struct sum_external_size_closure
+{
+    struct cb               **cb;
+    size_t                    keys_total_external_size;
+    size_t                    values_total_external_size;
+    cb_term_render_t          key_term_render;
+    cb_term_render_t          value_term_render;
+    cb_term_external_size_t   key_term_external_size;
+    cb_term_external_size_t   value_term_external_size;
+};
+
+static int
+sum_external_size(const struct cb_term *key,
+                  const struct cb_term *value,
+                  void                 *closure)
+{
+    struct sum_external_size_closure *sesc = (struct sum_external_size_closure *)closure;
+
+    sesc->keys_total_external_size += sesc->key_term_external_size(*(sesc->cb), key);
+    sesc->values_total_external_size += sesc->value_term_external_size(*(sesc->cb), value);
+
+    return 0;
+}
+
+static bool
+cb_bst_validate_external_size(struct cb   **cb,
+                              cb_offset_t   header_offset,
+                              bool          do_print)
+{
+    struct cb_bst_header *header = cb_bst_header_at(*cb, header_offset);
+    struct sum_external_size_closure sesc = {
+        .cb = cb,
+        .keys_total_external_size = 0,
+        .values_total_external_size = 0,
+        .key_term_render = header->key_term_render,
+        .value_term_render = header->value_term_render,
+        .key_term_external_size = header->key_term_external_size,
+        .value_term_external_size = header->value_term_external_size
+    };
+    int ret;
+
+    (void)ret;
+
+    ret = cb_bst_traverse(*cb, header_offset, sum_external_size, &sesc);
+    cb_assert(ret == 0);
+
+    size_t actual_bst_external_size = sesc.keys_total_external_size + sesc.values_total_external_size;
+    size_t calculated_bst_external_size = cb_bst_external_size(*cb, header_offset);
+    if (do_print) {
+        printf("actual_bst_external_size:%zu, calculated_bst_external_size:%zu\n",
+               actual_bst_external_size, calculated_bst_external_size);
+    }
+
+    return (actual_bst_external_size <= calculated_bst_external_size);
+}
 
 static bool
 cb_bst_validate(struct cb                       **cb,
@@ -431,7 +501,8 @@ cb_bst_validate(struct cb                       **cb,
     cb_offset_t           root_node_offset;
     uint32_t              tree_height;
     bool                  sequence_ok,
-                          structure_ok;
+                          structure_ok,
+                          external_size_ok;
 
     (void)s;
 
@@ -440,17 +511,20 @@ cb_bst_validate(struct cb                       **cb,
 
     header = cb_bst_header_at(*cb, header_offset);
     root_node_offset = header->root_node_offset;
-    cb_assert(root_node_offset != CB_BST_SENTINEL);
 
     /* First, just validate without printing. */
     sequence_ok  = cb_bst_validate_sequence(cb, header_offset, false);
     structure_ok = cb_bst_validate_structure(cb,
                                              root_node_offset,
+                                             header->key_term_cmp,
+                                             header->key_term_render,
+                                             header->value_term_render,
                                              &tree_height,
                                              0,
                                              false,
                                              s);
-    if (sequence_ok && structure_ok)
+    external_size_ok = cb_bst_validate_external_size(cb, header_offset, false);
+    if (sequence_ok && structure_ok && external_size_ok)
         return true;
 
     /* If that failed, go through again with printing of problems. */
@@ -472,6 +546,9 @@ cb_bst_validate(struct cb                       **cb,
 
         cb_bst_validate_structure(cb,
                                   root_node_offset,
+                                  header->key_term_cmp,
+                                  header->key_term_render,
+                                  header->value_term_render,
                                   &tree_height,
                                   0,
                                   true,
@@ -479,6 +556,11 @@ cb_bst_validate(struct cb                       **cb,
 
         cb_log_error("END   ERROR PRINT OF STRUCTURE %s",
                      name == NULL ? "" : name);
+    }
+
+    if (!external_size_ok) {
+        cb_log_error("Bad external size %s", name == NULL ? "" : name);
+        cb_bst_validate_external_size(cb, header_offset, true);
     }
 
     return false;
@@ -560,17 +642,19 @@ cb_bst_mutate_state_validate(struct cb                  *cb,
 
 
 static int
-cb_bst_header_alloc(struct cb   **cb,
-                    cb_offset_t  *header_offset)
+cb_bst_header_alloc(struct cb        **cb,
+                    struct cb_region  *region,
+                    cb_offset_t       *header_offset)
 {
     cb_offset_t new_header_offset;
     int ret;
 
-    ret = cb_memalign(cb,
-                      &new_header_offset,
-                      cb_alignof(struct cb_bst_header),
-                      sizeof(struct cb_bst_header));
-    if (ret != 0)
+    ret = cb_region_memalign(cb,
+                             region,
+                             &new_header_offset,
+                             cb_alignof(struct cb_bst_header),
+                             sizeof(struct cb_bst_header));
+    if (ret != CB_SUCCESS)
         return ret;
 
     *header_offset = new_header_offset;
@@ -580,17 +664,19 @@ cb_bst_header_alloc(struct cb   **cb,
 
 
 static int
-cb_bst_node_alloc(struct cb   **cb,
-                  cb_offset_t  *node_offset)
+cb_bst_node_alloc(struct cb        **cb,
+                  struct cb_region  *region,
+                  cb_offset_t       *node_offset)
 {
     cb_offset_t new_node_offset;
     int ret;
 
-    ret = cb_memalign(cb,
-                      &new_node_offset,
-                      cb_alignof(struct cb_bst_node),
-                      sizeof(struct cb_bst_node));
-    if (ret != 0)
+    ret = cb_region_memalign(cb,
+                             region,
+                             &new_node_offset,
+                             cb_alignof(struct cb_bst_node),
+                             sizeof(struct cb_bst_node));
+    if (ret != CB_SUCCESS)
         return ret;
 
     *node_offset = new_node_offset;
@@ -607,25 +693,32 @@ cb_bst_node_alloc(struct cb   **cb,
  *     parent node for which a node containing key may be inserted.
  */
 static int
-cb_bst_find_path(struct cb_bst_iter   *iter,
-                 const struct cb      *cb,
-                 cb_offset_t           root_node_offset,
+cb_bst_find_path(const struct cb      *cb,
+                 cb_offset_t           header_offset,
+                 struct cb_bst_iter   *iter,
                  const struct cb_term *key)
 {
-    cb_offset_t         curr_offset;
-    struct cb_bst_node *curr_node;
-    int                 cmp;
+    struct cb_bst_header *header;
+    cb_offset_t           curr_offset;
+    struct cb_bst_node   *curr_node;
+    int                   cmp;
+
+    header = cb_bst_header_at(cb, header_offset);
 
     iter->count = 0;
 
-    curr_offset = root_node_offset;
+    curr_offset = header->root_node_offset;
 
     while ((curr_node = cb_bst_node_at(cb, curr_offset)) != NULL)
     {
         iter->path_node_offset[iter->count] = curr_offset;
         iter->count++;
 
-        cmp = cb_term_cmp(cb, key, &(curr_node->key));
+        //FIXME the following is dangerous (fakes **cb), and should only be used for debugging.
+        //printf("About to compare %s with %s\n",
+        //       cb_term_to_str((struct cb**)&cb, cb_bst_render_get(cb, header_offset), key),
+        //       cb_term_to_str((struct cb**)&cb, cb_bst_render_get(cb, header_offset), &(curr_node->key)));
+        cmp = header->key_term_cmp(cb, key, &(curr_node->key));
         if (cmp == 0)
             return 0; /* FOUND */
 
@@ -643,20 +736,14 @@ cb_bst_contains_key(const struct cb      *cb,
                     const struct cb_term *key)
 {
     struct cb_bst_iter    iter;
-    struct cb_bst_header *header;
-    cb_offset_t           root_node_offset;
     int ret;
 
     if (header_offset == CB_BST_SENTINEL)
         return false;
 
-    header = cb_bst_header_at(cb, header_offset);
-    root_node_offset = header->root_node_offset;
-    cb_assert(root_node_offset != CB_BST_SENTINEL);
-
-    ret = cb_bst_find_path(&iter,
-                           cb,
-                           root_node_offset,
+    ret = cb_bst_find_path(cb,
+                           header_offset,
+                           &iter,
                            key);
     return (ret == 0);
 }
@@ -669,8 +756,6 @@ cb_bst_lookup(const struct cb      *cb,
               struct cb_term       *value)
 {
     struct cb_bst_iter    iter;
-    struct cb_bst_header *header;
-    cb_offset_t           root_node_offset;
     struct cb_term        ignored_key;
     int ret;
 
@@ -679,10 +764,6 @@ cb_bst_lookup(const struct cb      *cb,
         ret = -1;
         goto fail;
     }
-
-    header = cb_bst_header_at(cb, header_offset);
-    root_node_offset = header->root_node_offset;
-    cb_assert(root_node_offset != CB_BST_SENTINEL);
 
     /*
      * NOTE: cb would only need mutation on structural failures (for printing of
@@ -694,9 +775,9 @@ cb_bst_lookup(const struct cb      *cb,
                                     "pre-lookup",
                                     NULL));
 
-    ret = cb_bst_find_path(&iter,
-                           cb,
-                           root_node_offset,
+    ret = cb_bst_find_path(cb,
+                           header_offset,
+                           &iter,
                            key);
     if (ret != 0)
         goto fail;
@@ -715,19 +796,29 @@ fail:
 
 
 static int
-cb_bst_header_copy(struct cb   **cb,
-                   cb_offset_t  *header_offset)
+cb_bst_select_modifiable_header(struct cb        **cb,
+                                struct cb_region  *region,
+                                cb_offset_t        cutoff_offset,
+                                cb_offset_t       *header_offset)
 {
-    cb_offset_t           new_header_offset;
+    cb_offset_t           old_header_offset,
+                          new_header_offset;
     struct cb_bst_header *old_header,
                          *new_header;
     int ret;
 
-    ret = cb_bst_header_alloc(cb, &new_header_offset);
+    old_header_offset = *header_offset;
+
+    if (cb_bst_node_is_modifiable(old_header_offset, cutoff_offset))
+        return 0;
+
+    /* The provided header is unmodifiable and must be copied. */
+
+    ret = cb_bst_header_alloc(cb, region, &new_header_offset);
     if (ret != 0)
         return ret;
 
-    old_header = cb_bst_header_at(*cb, *header_offset);
+    old_header = cb_bst_header_at(*cb, old_header_offset);
     new_header = cb_bst_header_at(*cb, new_header_offset);
     memcpy(new_header, old_header, sizeof(*new_header));
 
@@ -738,9 +829,10 @@ cb_bst_header_copy(struct cb   **cb,
 
 
 static int
-cb_bst_select_modifiable_node_raw(struct cb          **cb,
-                                  cb_offset_t          cutoff_offset,
-                                  cb_offset_t         *node_offset)
+cb_bst_select_modifiable_node_raw(struct cb        **cb,
+                                  struct cb_region  *region,
+                                  cb_offset_t        cutoff_offset,
+                                  cb_offset_t       *node_offset)
 {
     /* If the node we are trying to modify has been freshly created, then it is
        safe to modify it in place.  Otherwise, a copy will be made and we will
@@ -761,7 +853,7 @@ cb_bst_select_modifiable_node_raw(struct cb          **cb,
      * uninitialized.
      * */
 
-    ret = cb_bst_node_alloc(cb, &new_node_offset);
+    ret = cb_bst_node_alloc(cb, region, &new_node_offset);
     if (ret != 0)
         return ret;
 
@@ -772,9 +864,10 @@ cb_bst_select_modifiable_node_raw(struct cb          **cb,
 
 
 static int
-cb_bst_select_modifiable_node(struct cb          **cb,
-                              cb_offset_t          cutoff_offset,
-                              cb_offset_t         *node_offset)
+cb_bst_select_modifiable_node(struct cb        **cb,
+                              struct cb_region  *region,
+                              cb_offset_t        cutoff_offset,
+                              cb_offset_t       *node_offset)
 {
     /* If the node we are trying to modify has been freshly created, then it is
        safe to modify it in place.  Otherwise, a copy will be made and we will
@@ -794,7 +887,7 @@ cb_bst_select_modifiable_node(struct cb          **cb,
 
     /* The provided node is unmodifiable and must be copied. */
 
-    ret = cb_bst_node_alloc(cb, &new_node_offset);
+    ret = cb_bst_node_alloc(cb, region, &new_node_offset);
     if (ret != 0)
         return ret;
 
@@ -852,6 +945,9 @@ cb_bst_print(struct cb   **cb,
         /* If we validated, then leverage structural check to print. */
         cb_bst_validate_structure(cb,
                                   root_node_offset,
+                                  header->key_term_cmp,
+                                  header->key_term_render,
+                                  header->value_term_render,
                                   &tree_height,
                                   0,
                                   true,
@@ -867,6 +963,7 @@ cb_bst_print(struct cb   **cb,
 
 static int
 cb_bst_red_pair_fixup_single(struct cb                  **cb,
+                             struct cb_region            *region,
                              struct cb_bst_mutate_state  *s)
 {
     /*
@@ -882,17 +979,14 @@ cb_bst_red_pair_fixup_single(struct cb                  **cb,
     cb_offset_t c_node_offset,
                 d_node_offset,
                 node1_offset,
-                old_node2_offset,
-                old_node3_offset,
-                new_node2_offset,
-                new_node3_offset;
+                node2_offset,
+                node3_offset;
 
-    struct cb_bst_node *old_node2,
-                       *old_node3,
-                       *new_node2,
-                       *new_node3;
+    struct cb_bst_node *node2,
+                       *node3;
     int ret;
 
+    (void)ret;
     cb_log_debug("fixup_single @ %ju", (uintmax_t)s->curr_node_offset);
 
     /* Check preconditions */
@@ -907,48 +1001,42 @@ cb_bst_red_pair_fixup_single(struct cb                  **cb,
     cb_assert(s->grandparent_to_parent_dir == s->parent_to_curr_dir);
 
     /* Extract in-motion node offsets. */
-    node1_offset     = s->curr_node_offset;
-    old_node2_offset = s->parent_node_offset;
-    old_node3_offset = s->grandparent_node_offset;
-    c_node_offset    = cb_bst_node_at(*cb, old_node2_offset)->child[!s->parent_to_curr_dir];
-    d_node_offset    = cb_bst_node_at(*cb, old_node3_offset)->child[!s->grandparent_to_parent_dir];
+    node1_offset  = s->curr_node_offset;
+    node2_offset  = s->parent_node_offset;
+    node3_offset  = s->grandparent_node_offset;
+    c_node_offset = cb_bst_node_at(*cb, node2_offset)->child[!s->parent_to_curr_dir];
+    d_node_offset = cb_bst_node_at(*cb, node3_offset)->child[!s->grandparent_to_parent_dir];
 
-    /* Allocate rewritten nodes, traversal-contiguous. */
-    ret = cb_bst_node_alloc(cb, &new_node2_offset);
-    if (ret != 0)
-        return ret;
-    ret = cb_bst_node_alloc(cb, &new_node3_offset);
-    if (ret != 0)
-        return ret;
+    /* Select the nodes we'll be working with, known to already be modifiable. */
+    ret = cb_bst_select_modifiable_node(cb, region, s->cutoff_offset, &node2_offset); //FIXME NODEALLOC DONE
+    cb_assert(ret == 0);
+    cb_assert(node2_offset == s->parent_node_offset);  //i.e. unchanged
+    ret = cb_bst_select_modifiable_node(cb, region, s->cutoff_offset, &node3_offset); //FIXME NODEALLOC DONE
+    cb_assert(ret == 0);
+    cb_assert(node3_offset == s->grandparent_node_offset);  //i.e. unchanged
 
     /* Perform the fixup-single. */
-    old_node2 = cb_bst_node_at(*cb, old_node2_offset);
-    new_node2 = cb_bst_node_at(*cb, new_node2_offset);
-    cb_term_assign(&(new_node2->key), &(old_node2->key));
-    cb_term_assign(&(new_node2->value), &(old_node2->value));
-    new_node2->color = CB_BST_BLACK;
-    new_node2->child[s->parent_to_curr_dir] = node1_offset;
-    new_node2->child[!s->parent_to_curr_dir] = new_node3_offset;
+    node2 = cb_bst_node_at(*cb, node2_offset);
+    node2->color = CB_BST_BLACK;
+    node2->child[s->parent_to_curr_dir] = node1_offset;
+    node2->child[!s->parent_to_curr_dir] = node3_offset;
 
-    old_node3 = cb_bst_node_at(*cb, old_node3_offset);
-    new_node3 = cb_bst_node_at(*cb, new_node3_offset);
-    cb_term_assign(&(new_node3->key), &(old_node3->key));
-    cb_term_assign(&(new_node3->value), &(old_node3->value));
-    new_node3->color = CB_BST_RED;
-    new_node3->child[s->parent_to_curr_dir] = c_node_offset;
-    new_node3->child[!s->parent_to_curr_dir] = d_node_offset;
+    node3 = cb_bst_node_at(*cb, node3_offset);
+    node3->color = CB_BST_RED;
+    node3->child[s->parent_to_curr_dir] = c_node_offset;
+    node3->child[!s->parent_to_curr_dir] = d_node_offset;
 
     /* Maintain the mutation state. */
     if (s->greatgrandparent_node_offset != CB_BST_SENTINEL)
     {
         cb_bst_node_at(*cb, s->greatgrandparent_node_offset)->child[
-            s->greatgrandparent_to_grandparent_dir] = new_node2_offset;
+            s->greatgrandparent_to_grandparent_dir] = node2_offset;
     }
-    if (s->new_root_node_offset == old_node3_offset)
-        s->new_root_node_offset = new_node2_offset;
+    if (s->new_root_node_offset == node3_offset)
+        s->new_root_node_offset = node2_offset;
     s->grandparent_node_offset             = s->greatgrandparent_node_offset;
     s->grandparent_to_parent_dir           = s->greatgrandparent_to_grandparent_dir;
-    s->parent_node_offset                  = new_node2_offset;
+    s->parent_node_offset                  = node2_offset;
     s->greatgrandparent_node_offset        = CB_BST_SENTINEL; /* Unknown */
     s->greatgrandparent_to_grandparent_dir = -1;              /* Unknown */
 
@@ -968,6 +1056,7 @@ cb_bst_red_pair_fixup_single(struct cb                  **cb,
 
 static int
 cb_bst_red_pair_fixup_double(struct cb                  **cb,
+                             struct cb_region            *region,
                              struct cb_bst_mutate_state  *s)
 {
     /*
@@ -984,21 +1073,16 @@ cb_bst_red_pair_fixup_double(struct cb                  **cb,
                 b_node_offset,
                 c_node_offset,
                 d_node_offset,
-                old_node1_offset,
-                old_node2_offset,
-                old_node3_offset,
-                new_node1_offset,
-                new_node2_offset,
-                new_node3_offset;
+                node1_offset,
+                node2_offset,
+                node3_offset;
 
-    struct cb_bst_node *old_node1,
-                       *old_node2,
-                       *old_node3,
-                       *new_node1,
-                       *new_node2,
-                       *new_node3;
+    struct cb_bst_node *node1,
+                       *node2,
+                       *node3;
     int ret;
 
+    (void)ret;
     cb_log_debug("fixup_double @ %ju", (uintmax_t)s->curr_node_offset);
 
     /* Check preconditions */
@@ -1013,70 +1097,61 @@ cb_bst_red_pair_fixup_double(struct cb                  **cb,
     cb_assert(s->grandparent_to_parent_dir != s->parent_to_curr_dir);
 
     /* Extract in-motion node offsets. */
-    old_node1_offset = s->parent_node_offset;
-    old_node2_offset = s->curr_node_offset;
-    old_node3_offset = s->grandparent_node_offset;
-    a_node_offset    = cb_bst_node_at(*cb, old_node1_offset)->child[!s->parent_to_curr_dir];
-    b_node_offset    = cb_bst_node_at(*cb, old_node2_offset)->child[!s->parent_to_curr_dir];
-    c_node_offset    = cb_bst_node_at(*cb, old_node2_offset)->child[s->parent_to_curr_dir];
-    d_node_offset    = cb_bst_node_at(*cb, old_node3_offset)->child[!s->grandparent_to_parent_dir];
+    node1_offset  = s->parent_node_offset;
+    node2_offset  = s->curr_node_offset;
+    node3_offset  = s->grandparent_node_offset;
+    a_node_offset = cb_bst_node_at(*cb, node1_offset)->child[!s->parent_to_curr_dir];
+    b_node_offset = cb_bst_node_at(*cb, node2_offset)->child[!s->parent_to_curr_dir];
+    c_node_offset = cb_bst_node_at(*cb, node2_offset)->child[s->parent_to_curr_dir];
+    d_node_offset = cb_bst_node_at(*cb, node3_offset)->child[!s->grandparent_to_parent_dir];
 
-    /* Allocate rewritten nodes, traversal-contiguous. */
-    ret = cb_bst_node_alloc(cb, &new_node2_offset);
-    if (ret != 0)
-        return ret;
-    ret = cb_bst_node_alloc(cb, &new_node1_offset);
-    if (ret != 0)
-        return ret;
-    ret = cb_bst_node_alloc(cb, &new_node3_offset);
-    if (ret != 0)
-        return ret;
+    /* Select the nodes we'll be working with, known to already be modifiable. */
+    ret = cb_bst_select_modifiable_node(cb, region, s->cutoff_offset, &node1_offset); //FIXME NODEALLOC DONE
+    cb_assert(ret == 0);
+    cb_assert(node1_offset == s->parent_node_offset);
+    ret = cb_bst_select_modifiable_node(cb, region, s->cutoff_offset, &node2_offset); //FIXME NODEALLOC DONE
+    cb_assert(ret == 0);
+    cb_assert(node2_offset == s->curr_node_offset);
+    ret = cb_bst_select_modifiable_node(cb, region, s->cutoff_offset, &node3_offset); //FIXME NODEALLOC DONE
+    cb_assert(ret == 0);
+    cb_assert(node3_offset == s->grandparent_node_offset);
 
     /* Perform the fixup-double. */
-    old_node1 = cb_bst_node_at(*cb, old_node1_offset);
-    new_node1 = cb_bst_node_at(*cb, new_node1_offset);
-    cb_term_assign(&(new_node1->key), &(old_node1->key));
-    cb_term_assign(&(new_node1->value), &(old_node1->value));
-    new_node1->color = CB_BST_RED;
-    new_node1->child[!s->parent_to_curr_dir] = a_node_offset;
-    new_node1->child[s->parent_to_curr_dir] = b_node_offset;
+    node1 = cb_bst_node_at(*cb, node1_offset);
+    node1->color = CB_BST_RED;
+    node1->child[!s->parent_to_curr_dir] = a_node_offset;
+    node1->child[s->parent_to_curr_dir] = b_node_offset;
 
-    old_node2 = cb_bst_node_at(*cb, old_node2_offset);
-    new_node2 = cb_bst_node_at(*cb, new_node2_offset);
-    cb_term_assign(&(new_node2->key), &(old_node2->key));
-    cb_term_assign(&(new_node2->value), &(old_node2->value));
-    new_node2->color = CB_BST_BLACK;
-    new_node2->child[s->grandparent_to_parent_dir] = new_node1_offset;
-    new_node2->child[!s->grandparent_to_parent_dir] = new_node3_offset;
+    node2 = cb_bst_node_at(*cb, node2_offset);
+    node2->color = CB_BST_BLACK;
+    node2->child[s->grandparent_to_parent_dir] = node1_offset;
+    node2->child[!s->grandparent_to_parent_dir] = node3_offset;
 
-    old_node3 = cb_bst_node_at(*cb, old_node3_offset);
-    new_node3 = cb_bst_node_at(*cb, new_node3_offset);
-    cb_term_assign(&(new_node3->key), &(old_node3->key));
-    cb_term_assign(&(new_node3->value), &(old_node3->value));
-    new_node3->color = CB_BST_RED;
-    new_node3->child[s->grandparent_to_parent_dir] = c_node_offset;
-    new_node3->child[!s->grandparent_to_parent_dir] = d_node_offset;
+    node3 = cb_bst_node_at(*cb, node3_offset);
+    node3->color = CB_BST_RED;
+    node3->child[s->grandparent_to_parent_dir] = c_node_offset;
+    node3->child[!s->grandparent_to_parent_dir] = d_node_offset;
 
     /* Maintain the mutation state. */
     if (s->greatgrandparent_node_offset != CB_BST_SENTINEL)
     {
         cb_bst_node_at(*cb, s->greatgrandparent_node_offset)->child[
-            s->greatgrandparent_to_grandparent_dir] = new_node2_offset;
+            s->greatgrandparent_to_grandparent_dir] = node2_offset;
     }
-    if (s->new_root_node_offset == old_node3_offset)
-        s->new_root_node_offset = new_node2_offset;
+    if (s->new_root_node_offset == node3_offset)
+        s->new_root_node_offset = node2_offset;
     s->grandparent_node_offset   = s->greatgrandparent_node_offset;
     s->grandparent_to_parent_dir = s->greatgrandparent_to_grandparent_dir;
-    s->parent_node_offset        = new_node2_offset;
+    s->parent_node_offset        = node2_offset;
     if (s->dir == s->parent_to_curr_dir)
     {
-        s->curr_node_offset = new_node3_offset;
+        s->curr_node_offset = node3_offset;
         s->dir              = !s->parent_to_curr_dir;
         /* s->parent_to_curr_dir remains same. */
     }
     else
     {
-        s->curr_node_offset   = new_node1_offset;
+        s->curr_node_offset   = node1_offset;
         s->dir                = s->parent_to_curr_dir;
         s->parent_to_curr_dir = !s->parent_to_curr_dir;
     }
@@ -1096,10 +1171,43 @@ cb_bst_red_pair_fixup_double(struct cb                  **cb,
     return 0;
 }
 
+int
+cb_bst_init(struct cb               **cb,
+            struct cb_region         *region,
+            cb_offset_t              *new_header_offset_out,
+            cb_term_comparator_t      key_term_cmp,
+            cb_term_comparator_t      value_term_cmp,
+            cb_term_render_t          key_term_render,
+            cb_term_render_t          value_term_render,
+            cb_term_external_size_t   key_term_external_size,
+            cb_term_external_size_t   value_term_external_size)
+{
+    struct cb_bst_header *header;
+    int ret;
+
+    ret = cb_bst_header_alloc(cb, region, new_header_offset_out);
+    if (ret != 0)
+        return ret;
+
+    header = cb_bst_header_at(*cb, *new_header_offset_out);
+    header->total_internal_size      = sizeof(struct cb_bst_header) + cb_alignof(struct cb_bst_header) - 1;
+    header->total_external_size      = 0;
+    header->hash_value               = 0;
+    header->key_term_cmp             = key_term_cmp;
+    header->value_term_cmp           = value_term_cmp;
+    header->key_term_render          = key_term_render;
+    header->value_term_render        = value_term_render;
+    header->key_term_external_size   = key_term_external_size;
+    header->value_term_external_size = value_term_external_size;
+    header->root_node_offset         = CB_BST_SENTINEL;
+
+    return 0;
+}
 
 /* NOTE: Insertion uses a top-down method. */
 int
 cb_bst_insert(struct cb            **cb,
+              struct cb_region      *region,
               cb_offset_t           *header_offset,
               cb_offset_t            cutoff_offset,
               const struct cb_term  *key,
@@ -1116,41 +1224,58 @@ cb_bst_insert(struct cb            **cb,
                                *right_child_node,
                                *root_node;
     int                         cmp;
-    ssize_t                     size_adjust = 0;
+    ssize_t                     internal_size_adjust = 0;
+    ssize_t                     external_size_adjust = 0;
+    unsigned int                num_entries_adjust = 0;
     cb_hash_t                   hash_adjust = 0;
+    cb_term_comparator_t        key_term_cmp;
+    cb_term_external_size_t     key_term_external_size;
+    cb_term_external_size_t     value_term_external_size;
     int ret;
 
     cb_log_debug("insert of key %s, value %s",
-                 cb_term_to_str(cb, key),
-                 cb_term_to_str(cb, value));
+                 cb_term_to_str(cb, cb_bst_key_render_get(*cb, *header_offset), key),
+                 cb_term_to_str(cb, cb_bst_value_render_get(*cb, *header_offset), value));
 
     /* Prepare a new header. */
     s.new_header_offset = *header_offset;
     if (s.new_header_offset == CB_BST_SENTINEL)
     {
-        ret = cb_bst_header_alloc(cb, &s.new_header_offset);
+        ret = cb_bst_init(cb,
+                          region,
+                          &s.new_header_offset,
+                          &cb_term_cmp,
+                          &cb_term_cmp,
+                          &cb_term_render,
+                          &cb_term_render,
+                          &cb_term_external_size,
+                          &cb_term_external_size);
         if (ret != 0)
             goto fail;
 
         header = cb_bst_header_at(*cb, s.new_header_offset);
-        header->total_size       = sizeof(struct cb_bst_header);
-        header->hash_value       = 0;
-        header->root_node_offset = CB_BST_SENTINEL;
     }
     else
     {
-        ret = cb_bst_header_copy(cb, &s.new_header_offset);
+        ret = cb_bst_select_modifiable_header(cb,
+                                              region,
+                                              cutoff_offset,
+                                              &s.new_header_offset);
         if (ret != 0)
             goto fail;
 
         header = cb_bst_header_at(*cb, s.new_header_offset);
-        cb_assert(header->root_node_offset != CB_BST_SENTINEL);
     }
 
     /* Prepare the rest of the mutation state. */
     s.new_root_node_offset = header->root_node_offset;
     s.curr_node_offset     = s.new_root_node_offset;
     s.cutoff_offset        = cutoff_offset;
+
+    /* Sample header contents now instead of continuously re-establishing header pointer. */
+    key_term_cmp             = header->key_term_cmp;
+    key_term_external_size   = header->key_term_external_size;
+    value_term_external_size = header->value_term_external_size;
 
     cb_assert(cb_bst_mutate_state_validate(*cb, &s));
     cb_heavy_assert(cb_bst_validate(cb, *header_offset, "pre-insert", &s));
@@ -1159,7 +1284,7 @@ cb_bst_insert(struct cb            **cb,
     if (s.curr_node_offset == CB_BST_SENTINEL)
     {
         /* The tree is empty, insert a new black node. */
-        ret = cb_bst_node_alloc(cb, &s.curr_node_offset);
+        ret = cb_bst_node_alloc(cb, region, &s.curr_node_offset);
         if (ret != 0)
             goto fail;
 
@@ -1172,9 +1297,10 @@ cb_bst_insert(struct cb            **cb,
         curr_node->hash_value = cb_bst_node_hash(*cb, curr_node);
 
         header = cb_bst_header_at(*cb, s.new_header_offset);
-        header->total_size       += (sizeof(struct cb_bst_node)
-                                    + cb_term_external_size(*cb, key)
-                                    + cb_term_external_size(*cb, value));
+        header->total_internal_size += (sizeof(struct cb_bst_node) + cb_alignof(struct cb_bst_node) - 1);
+        header->total_external_size += (header->key_term_external_size(*cb, key) +
+                                        header->value_term_external_size(*cb, value));
+        header->num_entries      = 1;
         header->hash_value       ^= curr_node->hash_value;
         header->root_node_offset =  s.curr_node_offset;
 
@@ -1189,6 +1315,7 @@ cb_bst_insert(struct cb            **cb,
 
     /* Begin path-copying downwards. */
     ret = cb_bst_select_modifiable_node(cb,
+                                        region,
                                         cutoff_offset,
                                         &s.curr_node_offset);
     if (ret != 0)
@@ -1202,6 +1329,7 @@ cb_bst_insert(struct cb            **cb,
     while (s.curr_node_offset != CB_BST_SENTINEL)
     {
         ret = cb_bst_select_modifiable_node(cb,
+                                            region,
                                             cutoff_offset,
                                             &s.curr_node_offset);
         if (ret != 0)
@@ -1213,23 +1341,23 @@ cb_bst_insert(struct cb            **cb,
 entry:
         cb_assert(cb_bst_node_is_modifiable(s.curr_node_offset, cutoff_offset));
         curr_node = cb_bst_node_at(*cb, s.curr_node_offset);
-        cmp = cb_term_cmp(*cb, key, &(curr_node->key));
+        cmp = key_term_cmp(*cb, key, &(curr_node->key));
         if (cmp == 0)
         {
             /* The key already exists in this tree.  Update the value at key
                and go no further. */
 
             /* Reduce by the old size and remove the old hash. */
-            size_adjust -= (ssize_t)cb_term_external_size(*cb,
-                                                          &(curr_node->value));
+            external_size_adjust -= (ssize_t)value_term_external_size(*cb,
+                                                                      &(curr_node->value));
             hash_adjust ^= curr_node->hash_value;
 
             cb_term_assign(&(curr_node->value), value);
             curr_node->hash_value = cb_bst_node_hash(*cb, curr_node);
 
             /* Increment by the new size and add the new hash. */
-            size_adjust += (ssize_t)cb_term_external_size(*cb,
-                                                          &(curr_node->value));
+            external_size_adjust += (ssize_t)value_term_external_size(*cb,
+                                                                      &(curr_node->value));
             hash_adjust ^= curr_node->hash_value;
 
             goto done;
@@ -1245,12 +1373,14 @@ entry:
             cb_assert(curr_node->color == CB_BST_BLACK);
 
             ret = cb_bst_select_modifiable_node(cb,
+                                                region,
                                                 cutoff_offset,
                                                 &left_child_offset);
             if (ret != 0)
                 goto fail;
 
             ret = cb_bst_select_modifiable_node(cb,
+                                                region,
                                                 cutoff_offset,
                                                 &right_child_offset);
             if (ret != 0)
@@ -1273,9 +1403,9 @@ entry:
             if (cb_bst_node_is_red(*cb, s.parent_node_offset))
             {
                 if (s.grandparent_to_parent_dir == s.parent_to_curr_dir)
-                    ret = cb_bst_red_pair_fixup_single(cb, &s);
+                    ret = cb_bst_red_pair_fixup_single(cb, region, &s);
                 else
-                    ret = cb_bst_red_pair_fixup_double(cb, &s);
+                    ret = cb_bst_red_pair_fixup_double(cb, region, &s);
 
                 if (ret != 0)
                     goto fail;
@@ -1306,7 +1436,7 @@ entry:
     cb_assert(s.parent_node_offset != CB_BST_SENTINEL);
     cb_assert(s.parent_to_curr_dir == 0 || s.parent_to_curr_dir == 1);
 
-    ret = cb_bst_node_alloc(cb, &s.curr_node_offset);
+    ret = cb_bst_node_alloc(cb, region, &s.curr_node_offset);
     if (ret != 0)
         goto fail;
 
@@ -1323,17 +1453,18 @@ entry:
     cb_term_assign(&(curr_node->value), value);
     curr_node->hash_value = cb_bst_node_hash(*cb, curr_node);
 
-    size_adjust = (ssize_t)(sizeof(struct cb_bst_node)
-                            + cb_term_external_size(*cb, &(curr_node->key))
-                            + cb_term_external_size(*cb, &(curr_node->value)));
+    internal_size_adjust = (ssize_t)(sizeof(struct cb_bst_node) + cb_alignof(struct cb_bst_node) - 1);
+    external_size_adjust = (key_term_external_size(*cb, &(curr_node->key)) +
+                            value_term_external_size(*cb, &(curr_node->value)));
+    num_entries_adjust = 1;
     hash_adjust = curr_node->hash_value;
 
     if (cb_bst_node_is_red(*cb, s.parent_node_offset))
     {
         if (s.grandparent_to_parent_dir == s.parent_to_curr_dir)
-            ret = cb_bst_red_pair_fixup_single(cb, &s);
+            ret = cb_bst_red_pair_fixup_single(cb, region, &s);
         else
-            ret = cb_bst_red_pair_fixup_double(cb, &s);
+            ret = cb_bst_red_pair_fixup_double(cb, region, &s);
 
         if (ret != 0)
             goto fail;
@@ -1344,9 +1475,11 @@ done:
     root_node->color = CB_BST_BLACK;
 
     header = cb_bst_header_at(*cb, s.new_header_offset);
-    header->total_size       += size_adjust;
-    header->hash_value       ^= hash_adjust;
-    header->root_node_offset =  s.new_root_node_offset;
+    header->total_internal_size += internal_size_adjust;
+    header->total_external_size += external_size_adjust;
+    header->num_entries         += num_entries_adjust;
+    header->hash_value          ^= hash_adjust;
+    header->root_node_offset    =  s.new_root_node_offset;
 
     *header_offset = s.new_header_offset;
 
@@ -1368,6 +1501,7 @@ fail:
 
 static int
 cb_bst_delete_fix_root(struct cb                  **cb,
+                       struct cb_region            *region,
                        struct cb_bst_mutate_state  *s)
 {
 
@@ -1416,7 +1550,7 @@ cb_bst_delete_fix_root(struct cb                  **cb,
     d_node_offset = cb_bst_node_at(*cb, old_node3_offset)->child[!s->dir];
 
     /* Allocated traversal-contiguous. */
-    ret = cb_bst_node_alloc(cb, &new_node3_offset);
+    ret = cb_bst_node_alloc(cb, region, &new_node3_offset);
     if (ret != 0)
         return ret;
 
@@ -1458,6 +1592,7 @@ cb_bst_delete_fix_root(struct cb                  **cb,
 
 static int
 cb_bst_delete_case1(struct cb                  **cb,
+                    struct cb_region            *region,
                     struct cb_bst_mutate_state  *s)
 {
     /*
@@ -1522,6 +1657,7 @@ cb_bst_delete_case1(struct cb                  **cb,
     /* Obtain suitable node for writing. */
     new_node3_offset = old_node3_offset;
     ret = cb_bst_select_modifiable_node_raw(cb,
+                                            region,
                                             s->cutoff_offset,
                                             &new_node3_offset);
     if (ret != 0)
@@ -1578,6 +1714,7 @@ cb_bst_delete_case1(struct cb                  **cb,
 
 static int
 cb_bst_delete_case2(struct cb                  **cb,
+                    struct cb_region            *region,
                     struct cb_bst_mutate_state  *s)
 {
 
@@ -1647,12 +1784,14 @@ cb_bst_delete_case2(struct cb                  **cb,
     /* Obtain suitable nodes for rewrite, traversal-contiguous. */
     new_node3_offset = old_node3_offset;
     ret = cb_bst_select_modifiable_node_raw(cb,
+                                            region,
                                             s->cutoff_offset,
                                             &new_node3_offset);
     if (ret != 0)
         return ret;
     new_node4_offset = old_node4_offset;
     ret = cb_bst_select_modifiable_node_raw(cb,
+                                            region,
                                             s->cutoff_offset,
                                             &new_node4_offset);
     if (ret != 0)
@@ -1717,6 +1856,7 @@ cb_bst_delete_case2(struct cb                  **cb,
 
 static int
 cb_bst_delete_case4(struct cb                  **cb,
+                    struct cb_region            *region,
                     struct cb_bst_mutate_state  *s)
 {
     /*
@@ -1787,12 +1927,14 @@ cb_bst_delete_case4(struct cb                  **cb,
     /* Obtain suitable nodes for rewrite, traversal-contiguous. */
     new_node3_offset = old_node3_offset;
     ret = cb_bst_select_modifiable_node_raw(cb,
+                                            region,
                                             s->cutoff_offset,
                                             &new_node3_offset);
     if (ret != 0)
         return ret;
     new_node4_offset = old_node4_offset;
     ret = cb_bst_select_modifiable_node_raw(cb,
+                                            region,
                                             s->cutoff_offset,
                                             &new_node4_offset);
     if (ret != 0)
@@ -1857,6 +1999,7 @@ cb_bst_delete_case4(struct cb                  **cb,
 
 static int
 cb_bst_delete_case5(struct cb                  **cb,
+                    struct cb_region            *region,
                     struct cb_bst_mutate_state  *s)
 {
     /*
@@ -1910,6 +2053,7 @@ cb_bst_delete_case5(struct cb                  **cb,
     /* Obtain suitable nodes for rewrite, traversal-contiguous. */
     new_node5_offset = old_node5_offset;
     ret = cb_bst_select_modifiable_node_raw(cb,
+                                            region,
                                             s->cutoff_offset,
                                             &new_node5_offset);
     if (ret != 0)
@@ -1955,6 +2099,7 @@ cb_bst_delete_case5(struct cb                  **cb,
 
 int
 cb_bst_delete(struct cb            **cb,
+              struct cb_region      *region,
               cb_offset_t           *header_offset,
               cb_offset_t            cutoff_offset,
               const struct cb_term  *key)
@@ -1968,11 +2113,13 @@ cb_bst_delete(struct cb            **cb,
                                *curr_node,
                                *found_node;
     int                         cmp;
-    size_t                      size_subtract = 0;
+    size_t                      internal_size_subtract = 0;
+    size_t                      external_size_subtract = 0;
+    unsigned int                num_entries_adjust = 0;
     cb_hash_t                   hash_adjust = 0;
     int ret;
 
-    cb_log_debug("delete of key %s", cb_term_to_str(cb, key));
+    cb_log_debug("delete of key %s", cb_term_to_str(cb, cb_bst_key_render_get(*cb, *header_offset), key));
 
     s.new_header_offset = *header_offset;
 
@@ -1995,9 +2142,13 @@ cb_bst_delete(struct cb            **cb,
         ret = -1;
         goto fail;
     }
+    num_entries_adjust = 1;
 
     /* Prepare a new header. */
-    ret = cb_bst_header_copy(cb, &s.new_header_offset);
+    ret = cb_bst_select_modifiable_header(cb,
+                                          region,
+                                          cutoff_offset,
+                                          &s.new_header_offset);
     if (ret != 0)
         goto fail;
 
@@ -2017,6 +2168,7 @@ cb_bst_delete(struct cb            **cb,
 
     /* Begin path-copying downwards. */
     ret = cb_bst_select_modifiable_node(cb,
+                                        region,
                                         cutoff_offset,
                                         &s.curr_node_offset);
     if (ret != 0)
@@ -2025,7 +2177,7 @@ cb_bst_delete(struct cb            **cb,
     curr_node = cb_bst_node_at(*cb, s.curr_node_offset);
     curr_node->color = CB_BST_RED;
     s.new_root_node_offset = s.curr_node_offset;
-    cmp = cb_term_cmp(*cb, key, &(curr_node->key));
+    cmp = header->key_term_cmp(*cb, key, &(curr_node->key));
     if (cmp == 0)
     {
         /* The key-to-delete exists in this tree.  Make note of this offset
@@ -2041,7 +2193,7 @@ cb_bst_delete(struct cb            **cb,
     if (cb_bst_node_is_black(*cb, curr_node->child[s.dir]) &&
         cb_bst_node_is_red(*cb, curr_node->child[!s.dir]))
     {
-        ret = cb_bst_delete_fix_root(cb, &s);
+        ret = cb_bst_delete_fix_root(cb, region, &s);
         if (ret != 0)
             goto fail;
     }
@@ -2052,6 +2204,7 @@ cb_bst_delete(struct cb            **cb,
     while (s.curr_node_offset != CB_BST_SENTINEL)
     {
         ret = cb_bst_select_modifiable_node(cb,
+                                            region,
                                             cutoff_offset,
                                             &s.curr_node_offset);
         if (ret != 0)
@@ -2066,7 +2219,7 @@ cb_bst_delete(struct cb            **cb,
 
         cb_assert(cb_bst_node_is_modifiable(s.curr_node_offset, cutoff_offset));
         curr_node = cb_bst_node_at(*cb, s.curr_node_offset);
-        cmp = cb_term_cmp(*cb, key, &(curr_node->key));
+        cmp = header->key_term_cmp(*cb, key, &(curr_node->key));
         if (cmp == 0)
         {
             /* The key-to-delete exists in this tree.  Make note of this offset
@@ -2098,7 +2251,7 @@ entry:
         /* CASE 1 - "Child-To-Descend-To's Sibling is Red */
         if (cb_bst_node_is_red(*cb, curr_node->child[!s.dir]))
         {
-            ret = cb_bst_delete_case1(cb, &s);
+            ret = cb_bst_delete_case1(cb, region, &s);
             if (ret != 0)
                 goto fail;
 
@@ -2116,7 +2269,7 @@ entry:
         if (cb_bst_node_is_red(*cb,
                 cb_bst_node_at(*cb, s.sibling_node_offset)->child[s.parent_to_curr_dir]))
         {
-            ret = cb_bst_delete_case2(cb, &s);
+            ret = cb_bst_delete_case2(cb, region, &s);
             if (ret != 0)
                 goto fail;
 
@@ -2128,7 +2281,7 @@ entry:
         if (cb_bst_node_is_red(*cb,
                 cb_bst_node_at(*cb, s.sibling_node_offset)->child[!s.parent_to_curr_dir]))
         {
-            ret = cb_bst_delete_case4(cb, &s);
+            ret = cb_bst_delete_case4(cb, region, &s);
             if (ret != 0)
                 goto fail;
 
@@ -2138,7 +2291,7 @@ entry:
         /* CASE 5 - "Sibling and Its Children are Black" */
         if (cb_bst_node_is_black(*cb, s.sibling_node_offset))
         {
-            ret = cb_bst_delete_case5(cb, &s);
+            ret = cb_bst_delete_case5(cb, region, &s);
             if (ret != 0)
                 goto fail;
         }
@@ -2177,9 +2330,9 @@ descend:
         goto fail;
     }
     found_node = cb_bst_node_at(*cb, found_node_offset);
-    size_subtract = sizeof(struct cb_bst_node)
-                    + cb_term_external_size(*cb, &(found_node->key))
-                    + cb_term_external_size(*cb, &(found_node->value));
+    internal_size_subtract = (sizeof(struct cb_bst_node) + cb_alignof(struct cb_bst_node) - 1);
+    external_size_subtract = (header->key_term_external_size(*cb, &(found_node->key)) +
+                              header->value_term_external_size(*cb, &(found_node->value)));
     hash_adjust   = found_node->hash_value;
 
     cb_assert(s.parent_node_offset != CB_BST_SENTINEL);
@@ -2224,16 +2377,13 @@ descend:
     }
 
     header = cb_bst_header_at(*cb, s.new_header_offset);
-    cb_assert(size_subtract < header->total_size);
-    header->total_size       -= size_subtract;
-    header->hash_value       ^= hash_adjust;
-    header->root_node_offset =  s.new_root_node_offset;
-
-    /* Disallow header + empty BST. */
-    if (s.new_root_node_offset == CB_BST_SENTINEL)
-        *header_offset = CB_BST_SENTINEL;
-    else
-        *header_offset = s.new_header_offset;
+    cb_assert(internal_size_subtract < header->total_internal_size);
+    cb_assert(external_size_subtract < header->total_external_size);
+    header->total_internal_size -= internal_size_subtract;
+    header->total_external_size -= external_size_subtract;
+    header->num_entries         -= num_entries_adjust;
+    header->hash_value          ^= hash_adjust;
+    header->root_node_offset    =  s.new_root_node_offset;
 
     cb_heavy_assert(cb_bst_validate(cb,
                                     *header_offset,
@@ -2254,10 +2404,13 @@ fail:
 
 
 int
-cb_bst_cmp(const struct cb *cb,
-           cb_offset_t      lhs_header_offset,
-           cb_offset_t      rhs_header_offset)
+cb_bst_cmp(const struct cb      *cb,
+           cb_offset_t           lhs_header_offset,
+           cb_offset_t           rhs_header_offset)
 {
+    struct cb_bst_header *lhs_header;
+    struct cb_bst_header *rhs_header;
+
     struct cb_bst_iter lhs_curr,
                        lhs_end,
                        rhs_curr,
@@ -2267,6 +2420,17 @@ cb_bst_cmp(const struct cb *cb,
                        rhs_key,
                        rhs_value;
     int                cmp;
+
+    lhs_header = cb_bst_header_at(cb, lhs_header_offset);
+    rhs_header = cb_bst_header_at(cb, rhs_header_offset);
+
+    //NOTE: It is not sensible to compare BSTs using different comparators
+    // (which would we prefer for *this* comparison?).  It must be expected
+    //  that the user has segregated their BST uses appropriately such that
+    //  only like-comparator ones are ever compared.
+    cb_assert(lhs_header->key_term_cmp == rhs_header->key_term_cmp);
+    cb_assert(lhs_header->value_term_cmp == rhs_header->value_term_cmp);
+    (void)rhs_header;
 
     cb_bst_get_iter_start(cb, lhs_header_offset, &lhs_curr);
     cb_bst_get_iter_end(cb, lhs_header_offset, &lhs_end);
@@ -2280,11 +2444,11 @@ cb_bst_cmp(const struct cb *cb,
         cb_bst_iter_deref(cb, &lhs_curr, &lhs_key, &lhs_value);
         cb_bst_iter_deref(cb, &rhs_curr, &rhs_key, &rhs_value);
 
-        cmp = cb_term_cmp(cb, &lhs_key, &rhs_key);
+        cmp = lhs_header->key_term_cmp(cb, &lhs_key, &rhs_key);
         if (cmp != 0)
             return cmp;
 
-        cmp = cb_term_cmp(cb, &lhs_value, &rhs_value);
+        cmp = lhs_header->value_term_cmp(cb, &lhs_value, &rhs_value);
         if (cmp != 0)
             return cmp;
 
@@ -2306,15 +2470,59 @@ cb_bst_cmp(const struct cb *cb,
 
 
 size_t
+cb_bst_internal_size(const struct cb *cb,
+                     cb_offset_t      header_offset)
+{
+    if (header_offset == CB_BST_SENTINEL)
+        return 0;
+
+    return cb_bst_header_at(cb, header_offset)->total_internal_size;
+}
+
+size_t
+cb_bst_external_size(const struct cb *cb,
+                     cb_offset_t      header_offset)
+{
+    if (header_offset == CB_BST_SENTINEL)
+        return 0;
+
+    return cb_bst_header_at(cb, header_offset)->total_external_size;
+}
+
+int
+cb_bst_external_size_adjust(struct cb   *cb,
+                            cb_offset_t  header_offset,
+                            ssize_t      adjustment)
+{
+    if (header_offset == CB_BST_SENTINEL) {
+        return -1;
+    }
+
+    struct cb_bst_header *header = cb_bst_header_at(cb, header_offset);
+    header->total_external_size = (size_t)((ssize_t)header->total_external_size + adjustment);
+    return 0;
+}
+
+size_t
 cb_bst_size(const struct cb *cb,
             cb_offset_t      header_offset)
 {
     if (header_offset == CB_BST_SENTINEL)
         return 0;
 
-    return cb_bst_header_at(cb, header_offset)->total_size;
+    return cb_bst_header_at(cb, header_offset)->total_internal_size +
+           cb_bst_header_at(cb, header_offset)->total_external_size;
 }
 
+unsigned int
+cb_bst_num_entries(const struct cb *cb,
+                   cb_offset_t      header_offset)
+{
+    if (header_offset == CB_BST_SENTINEL)
+        return 0;
+
+    return cb_bst_header_at(cb, header_offset)->num_entries;
+}
 
 void
 cb_bst_hash_continue(cb_hash_state_t *hash_state,

@@ -23,6 +23,9 @@
 #include <inttypes.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum cb_term_tag
 {
@@ -57,6 +60,9 @@ struct cb_term
     union cb_raw_term value;
 };
 
+typedef int (*cb_term_comparator_t)(const struct cb *cb,
+                                    const struct cb_term *lhs,
+                                    const struct cb_term *rhs);
 
 int
 cb_term_cmp(const struct cb      *cb,
@@ -66,7 +72,11 @@ cb_term_cmp(const struct cb      *cb,
 /*
  * Returns the size of a term's linked data (in the case of BSTs, for example).
  * Primitive terms such as u64s will return 0, as they have no external data.
+ * (This should include the term's content's alignment - 1)
  */
+typedef size_t (*cb_term_external_size_t)(const struct cb      *cb,
+                                          const struct cb_term *term);
+
 size_t
 cb_term_external_size(const struct cb      *cb,
                       const struct cb_term *term);
@@ -126,6 +136,11 @@ cb_hash_t
 cb_term_hash(const struct cb      *cb,
              const struct cb_term *term);
 
+typedef int (*cb_term_render_t)(cb_offset_t           *dest_offset,
+                                struct cb            **cb,
+                                const struct cb_term  *term,
+                                unsigned int           flags);
+
 int
 cb_term_render(cb_offset_t           *dest_offset,
                struct cb            **cb,
@@ -134,6 +149,7 @@ cb_term_render(cb_offset_t           *dest_offset,
 
 const char*
 cb_term_to_str(struct cb            **cb,
+               cb_term_render_t       render,
                const struct cb_term  *term);
 
 
@@ -196,7 +212,7 @@ cb_term_set_u64(struct cb_term *term, uint64_t val)
 
 
 CB_INLINE uint64_t
-cb_term_get_u64(struct cb_term *term)
+cb_term_get_u64(const struct cb_term *term)
 {
     cb_assert(term->tag == CB_TERM_U64);
     return term->value.u64;
@@ -212,7 +228,7 @@ cb_term_set_dbl(struct cb_term *term, double val)
 
 
 CB_INLINE double
-cb_term_get_dbl(struct cb_term *term)
+cb_term_get_dbl(const struct cb_term *term)
 {
     cb_assert(term->tag == CB_TERM_DBL);
     return term->value.dbl;
@@ -228,7 +244,7 @@ cb_term_set_bst(struct cb_term *term, cb_offset_t bst_root)
 
 
 CB_INLINE cb_offset_t
-cb_term_get_bst(struct cb_term *term)
+cb_term_get_bst(const struct cb_term *term)
 {
     cb_assert(term->tag == CB_TERM_BST);
     return term->value.bst;
@@ -244,11 +260,15 @@ cb_term_set_structmap(struct cb_term *term, cb_offset_t structmap_root)
 
 
 CB_INLINE cb_offset_t
-cb_term_get_structmap(struct cb_term *term)
+cb_term_get_structmap(const struct cb_term *term)
 {
     cb_assert(term->tag == CB_TERM_STRUCTMAP);
     return term->value.structmap;
 }
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 
 #endif /* ! defined _CB_TERM_H_*/
