@@ -848,6 +848,9 @@ cb_resize(struct cb **cb,
                  (requested_ring_size < cb_ring_size(*cb) ? "shrink" : "grow"),
                  requested_ring_size);
 
+    if ((*cb)->params.on_preresize)
+        (*cb)->params.on_preresize(*cb, NULL);
+
     /* Allocate a new cb with the larger requested ring size. */
     memcpy(&new_params, &(*cb)->params, sizeof(new_params));
     new_params.ring_size = requested_ring_size;

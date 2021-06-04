@@ -68,6 +68,7 @@ struct cb_params
     int             mmap_prot;
     int             mmap_flags;
     char            filename_prefix[64];
+    cb_on_resize_t  on_preresize;
     cb_on_resize_t  on_resize;
 };
 
