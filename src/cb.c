@@ -171,6 +171,8 @@ Garbage Collection
 
 #define cb_alignof(x) (__alignof__(x))
 
+#define MIN(A,B) ({ typeof(A) _a = (A); typeof(B) _b = (B); _a < _b ? _a : _b; })
+
 static size_t cb_page_size;
 static const unsigned int CB_MAX_MMAP_RETRIES = 5;
 
@@ -698,7 +700,6 @@ cb_memcpy_in(struct cb   *cb,
     memcpy(ring_start, (char*)src + upper_frag_len, lower_frag_len);
 }
 
-
 void
 cb_memcpy(struct cb       *dest_cb,
           cb_offset_t      dest_offset,
@@ -706,65 +707,29 @@ cb_memcpy(struct cb       *dest_cb,
           cb_offset_t      src_offset,
           size_t           len)
 {
-    void *src_start, *src_end, *dest_start, *dest_end;
-    size_t dest_upper_frag_len, src_upper_frag_len;
-    size_t frag[2];
-
     cb_validate(src_cb);
     cb_validate(dest_cb);
     cb_assert(len <= cb_ring_size(src_cb));
     cb_assert(len <= cb_ring_size(dest_cb));
 
-    src_start  = cb_at(src_cb, src_offset);
-    dest_start = cb_at(dest_cb, dest_offset);
-    (void)src_end;  /* only used in assert */
-    (void)dest_end; /* only used in assert */
+    cb_offset_t copy_src_offset = src_offset;
+    cb_offset_t copy_dest_offset = dest_offset;
+    size_t remaining_len = len;
+    while (remaining_len > 0) {
+        char *src = cb_at(src_cb, copy_src_offset);
+        char *dest = cb_at(dest_cb, copy_dest_offset);
 
-    src_upper_frag_len  = (char*)cb_loop_end(src_cb) - (char*)src_start;
-    dest_upper_frag_len = (char*)cb_loop_end(dest_cb) - (char*)dest_start;
+        cb_assert(src < (char*)cb_ring_end(src_cb));
+        cb_assert(dest < (char*)cb_ring_end(dest_cb));
 
-    cb_assert((src_end = cb_at(src_cb, src_offset + len),
-               len <= src_upper_frag_len + cb_loop_size(src_cb) ||
-               src_start > src_end ||
-               (src_start == src_end && src_start != cb_ring_start(src_cb))));
-    cb_assert((dest_end = cb_at(dest_cb, dest_offset + len),
-               len <= dest_upper_frag_len + cb_loop_size(src_cb) ||
-               dest_start > dest_end ||
-               (dest_start == dest_end && dest_start != cb_ring_start(dest_cb))));
+        size_t segment_len = MIN(remaining_len, MIN((size_t)((char*)cb_ring_end(src_cb) - src), (size_t)((char*)cb_ring_end(dest_cb) - dest)));
 
-    /*
-     * This section is essentially an unrolled sort of a three-element frag
-     * array containing the elements [len, src_upper_frag_len,
-     * dest_upper_frag_len], with a clip of all elements to no more than len.
-     * (The non-existent third element, frag[2], is being represented by len
-     * because with clipping all paths lead to frag[2] holding value len.)
-     */
-    if (len <= dest_upper_frag_len)
-    {
-        frag[0] = (src_upper_frag_len < len) ? src_upper_frag_len : len;
-        frag[1] = len;
+        memcpy(dest, src, segment_len);
+
+        copy_src_offset += segment_len;
+        copy_dest_offset += segment_len;
+        remaining_len -= segment_len;
     }
-    else
-    {
-        if (src_upper_frag_len <= dest_upper_frag_len)
-        {
-            frag[0] = src_upper_frag_len;
-            frag[1] = dest_upper_frag_len;
-        }
-        else
-        {
-            frag[0] = dest_upper_frag_len;
-            frag[1] = (src_upper_frag_len < len) ? src_upper_frag_len : len;
-        }
-    }
-
-    memcpy(dest_start, src_start, frag[0]);
-    memcpy(cb_at(dest_cb, dest_offset + frag[0]),
-           cb_at(src_cb, src_offset + frag[0]),
-           frag[1] - frag[0]);
-    memcpy(cb_at(dest_cb, dest_offset + frag[1]),
-           cb_at(src_cb, src_offset + frag[1]),
-           len - frag[1]);
 }
 
 
