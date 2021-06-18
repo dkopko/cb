@@ -2468,6 +2468,12 @@ cb_bst_cmp(const struct cb      *cb,
     return 1; /* lhs greater than rhs */
 }
 
+size_t
+cb_bst_internal_size_given_key_count(unsigned int keys) {
+
+    return (sizeof(struct cb_bst_header) + cb_alignof(struct cb_bst_header) - 1)
+        + keys * (sizeof(struct cb_bst_node) + cb_alignof(struct cb_bst_node) - 1);
+}
 
 size_t
 cb_bst_internal_size(const struct cb *cb,

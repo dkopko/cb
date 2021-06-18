@@ -97,6 +97,9 @@ cb_bst_cmp(const struct cb      *cb,
            cb_offset_t           rhs_header_offset);
 
 size_t
+cb_bst_internal_size_given_key_count(unsigned int keys);
+
+size_t
 cb_bst_internal_size(const struct cb *cb,
                      cb_offset_t      header_offset);
 
