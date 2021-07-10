@@ -683,7 +683,7 @@ cb_ensure_free_contiguous(struct cb **cb,
          * ring_start    cursor    data_start    ring_end
          */
 
-        if ((size_t)(data_start_ptr - cursor_ptr) < len)
+        if (len < (size_t)(data_start_ptr - cursor_ptr))
             return 0;
     }
 
