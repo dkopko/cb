@@ -77,7 +77,7 @@ cb_region_create(struct cb        **cb,
     region->alignment      = alignment;
     region->flags          = flags;
 
-    cb_region_validate(region);
+    cb_assert(cb_region_validate(region));
     return CB_SUCCESS;
 }
 
@@ -128,7 +128,7 @@ cb_region_derive(struct cb_region *region,
     subregion->alignment      = alignment;
     subregion->flags          = flags;
 
-    cb_region_validate(region);
+    cb_assert(cb_region_validate(region));
     return CB_SUCCESS;
 }
 
@@ -174,7 +174,7 @@ cb_region_memalign_final(struct cb_region  *region,
 
     *offset = mem_start;
 
-    cb_region_validate(region);
+    cb_assert(cb_region_validate(region));
     return CB_SUCCESS;
 }
 
