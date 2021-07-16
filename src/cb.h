@@ -483,12 +483,17 @@ cb_ring_mask(const struct cb *cb)
     return cb->mask;
 }
 
-CB_INLINE void*
-cb_at_immed(void        *ring_start,
-            cb_mask_t    ring_mask,
-            cb_offset_t  offset)
+struct cb_at_immed_param_t
 {
-    return (char*)ring_start + (offset & ring_mask);
+    void      *ring_start;
+    cb_mask_t  ring_mask;
+};
+
+CB_INLINE void*
+cb_at_immed(struct cb_at_immed_param_t *param,
+            cb_offset_t                 offset)
+{
+    return (char*)param->ring_start + (offset & param->ring_mask);
 }
 
 /*
@@ -505,7 +510,8 @@ cb_at(const struct cb *cb,
     /* offset <= data_end */
     cb_assert(cb_offset_cmp(offset, cb->data_start + cb_ring_size(cb)) < 1);
 
-    return cb_at_immed(cb_ring_start(cb), cb_ring_mask(cb), offset);
+    struct cb_at_immed_param_t p = { cb_ring_start(cb), cb_ring_mask(cb) };
+    return cb_at_immed(&p, offset);
 }
 
 
