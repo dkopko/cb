@@ -18,6 +18,7 @@ The cb (Continuous Buffer) project is a functional library for memory management
 ### Data Structures
 
 - ✅ Partially-persistent red-black tree implementation (`cb_bst`)
+- ✅ Array Mapped Trie implementation (`cb_structmap_amt`)
 - ✅ Term handling facilities (`cb_term`)
 - ✅ Basic utility functions and support code
 
@@ -30,7 +31,8 @@ The cb (Continuous Buffer) project is a functional library for memory management
 
 ### Implementation Refinements
 
-- 🔄 Refactoring and migrating code from klox to cb
+- ✅ Migrated structmap_amt implementation from klox to cb
+- 🔄 Continuing refactoring and migrating code from klox to cb
 - 🔄 Enhancing the partially-persistent red-black tree implementation
 - 🔄 Optimizing memory usage and reducing unnecessary copying
 - 🔄 Improving API design and usability
@@ -87,9 +89,10 @@ The cb (Continuous Buffer) project is a functional library for memory management
 ## Next Milestone Goals
 
 1. **Klox Code Migration**:
-   - Identify code in klox that belongs in cb
-   - Refactor and migrate appropriate functionality
-   - Ensure clean integration points
+   - ✅ Migrated structmap_amt.h from klox to cb
+   - 🔄 Identify additional code in klox that belongs in cb
+   - 🔄 Continue migrating appropriate functionality
+   - 🔄 Ensure clean integration points
 
 2. **Improved Data Structure Performance**:
    - Optimize partially-persistent red-black tree operations

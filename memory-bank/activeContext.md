@@ -11,9 +11,9 @@ The cb project is currently focused on refining its core continuous buffer imple
 
 ## Recent Developments
 
+- Successfully migrated Array Mapped Trie (structmap_amt) implementation from klox
 - Consolidation around the core cb buffer implementation
 - Refinement of the partially-persistent data structures
-- Abandonment of several experimental components (structmap, lb_set, map) in favor of more focused approach
 - Improved integration with the klox project to demonstrate practical application
 
 ## Current System State
@@ -22,6 +22,7 @@ The system is functional, with:
 
 - A working continuous buffer implementation with proper region management
 - A solid partially-persistent red-black tree implementation
+- An efficient Array Mapped Trie implementation for O(log32(n)) lookups
 - Effective serial number arithmetic for reliable offset comparisons
 - Working magic ring buffer implementation to avoid bounds checking
 - Integration with klox demonstrating the approach in action
@@ -53,8 +54,9 @@ The cb library integrates with other systems through:
 ### Short-term Goals
 
 1. **Klox Code Refactoring/Migration**:
-   - Identify code written for the klox integration of cb which would be better homed in cb.
-   - Refactor and migrate some of the klox integration code to rehome it in cb.
+   - ✅ Migrated structmap_amt.h from klox to cb
+   - Identify additional code from klox that should be migrated
+   - Continue refactoring and integrating klox code where appropriate
 
 2. **Persistent Data Structure Refinement**:
    - Enhance the partially-persistent red-black tree implementation
