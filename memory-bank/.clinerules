@@ -1,0 +1,87 @@
+# cb Project Rules and Patterns
+
+## Project Overview
+- cb is a Continuous Buffer library implementing a power-of-2 sized ring buffer
+- Primary innovation: persistent and partially-persistent data structures
+- Serves as the foundation for klox's O(1) GC implementation
+- Focuses on eliminating traditional distinctions between stack and heap allocation
+
+## Key Technical Concepts
+
+### Memory Management
+- `struct cb`: Power-of-2 sized ring buffer is the foundation for all memory
+- `cb_region`: Regions within the buffer for managed allocations
+- Magic ring buffer implementation avoids bounds checking through virtual memory tricks
+- Serial number arithmetic for reliable offset comparisons even with wraparound
+
+### Cutoff Offset
+- `cutoff_offset`: Critical boundary between mutable and immutable memory
+- Objects/structures below cutoff_offset must be treated as immutable
+- Objects/structures above cutoff_offset can be mutated in place
+- Copy-forward pattern used when modifications needed to immutable structures
+
+### Partially-Persistent Data Structures
+- `cb_bst`: Partially-persistent red-black tree as a core implementation
+- Structures combine immutable (below cutoff) and mutable (above cutoff) nodes
+- Path-copying approach for modifications to immutable structures
+- Enables efficient memory usage through structure sharing
+
+### Memory Safety
+- Heavy reliance on assertions for invariant checking
+- Careful management of cutoff_offset critical for correctness
+- Consistent handling of mutable/immutable boundaries
+
+## Abandoned Approaches
+- `cb_structmap`: Object ID to offset mapping (abandoned)
+- `cb_lb_set`: Lower-bound set implementation (abandoned)
+- `cb_map`: Map implementation with key-value functionality (abandoned)
+- `cb_struct_id_t`: Object identifier system (abandoned)
+
+## Integration with klox
+- Current focus is on identifying klox code that belongs in cb
+- Refactoring and migrating appropriate functionality
+- Maintaining clean integration points
+- Both projects share the ring buffer and memory management approach
+
+## Development Practices
+
+### Build System
+- Use standard Make-based build system
+- Build with `make -j`
+- Run tests with `make test`
+
+### Testing
+- Unit tests in the test/ directory
+- Performance measurement tests for benchmarking
+- Test runner script in scripts/test_suite.sh
+
+### Code Organization
+- src/ contains core library implementation
+- test/ contains test suite
+- scripts/ contains build and test scripts
+- external/ contains third-party dependencies
+- attic/ contains legacy or experimental code
+
+## Documentation Standards
+- Document performance characteristics explicitly
+- Use assertions liberally to catch invariant violations
+- Prefer clarity over brevity in implementation
+- Explain novel concepts thoroughly, especially for new developers
+
+## Memory-Related Terminology
+- **cutoff_offset**: Boundary between mutable and immutable memory
+- **magic ring buffer**: Memory-mapped technique to avoid bounds checking
+- **partially persistent**: Data structures combining mutable and immutable nodes
+- **LTE/GTE**: Less/Greater Than or Equal in serial number arithmetic
+
+## Performance Considerations
+- Ring buffer resizing causes pauses and should be minimized
+- Path copying has overhead but enables persistent data structures
+- Serial number arithmetic is essential for correct offset comparisons
+- Memory estimation helps avoid expensive resizing operations
+
+## Known Issues and Limitations
+- Complex memory model requires careful reasoning
+- Heavy reliance on assertions for correctness
+- Learning curve for developers new to the approach
+- Ring buffer resizing introduces pauses
