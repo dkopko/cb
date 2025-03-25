@@ -59,50 +59,50 @@ address throughout all of the program state.
 
 * The program thread (a.k.a. "Mutator") to hold 3 maps of `handle -> address`: 
   A, B, C.
-* Mutator only ever modifies C.
-* These maps have a precedence: entries in C supersede entries in B which 
-  supersede entries in A.  (It can be said that C "overlays" B "overlays" A.)
-* When Mutator needs to lookup an address for a given handle it checks C then B 
-  then A, stopping when it finds the entry.
+* Mutator only ever modifies A.
+* These maps have a precedence: entries in A supersede entries in B which 
+  supersede entries in C.  (It can be said that A "overlays" B "overlays" C.)
+* When Mutator needs to lookup an address for a given handle it checks A then B 
+  then C, stopping when it finds the entry.
 * Deletions of an entry for handle `h` must be performed by storing a mapping 
-  `h -> TOMBSTONE` in C, because a simple deletion of `h` in C would otherwise 
-allow an entry for `h` to "peek through" from B or A.
-* Asynchronously to the Mutator, the GC thread can consolidate and merge maps A 
-  and B into a merged map M.  (M gets then union of A's and B's keys minus B's 
+  `h -> TOMBSTONE` in A, because a simple deletion of `h` in A would otherwise 
+allow an entry for `h` to "peek through" from B or C.
+* Asynchronously to the Mutator, the GC thread can consolidate and merge maps C 
+  and B into a merged map M.  (M gets then union of C's and B's keys minus B's 
 keys whose value was TOMBSTONE, then all data at the addresses get relocated 
 and the addresses updated.)
 * Once the GC has completed its consolidation, it can inform the Mutator of M, 
-  which can then atomically do:  A=M, B=C, C=(empty) (these should be seen as 
+  which can then atomically do:  C=M, B=A, A=(empty) (these should be seen as 
 cheap pointer-like assignments, not recursive actions).
-* This cycle repeats over time, such that the C map migrates to B, which will 
-  eventually get merged by the GC with A, allowing the Mutator to never have to 
+* This cycle repeats over time, such that the A map migrates to B, which will 
+  eventually get merged by the GC with C, allowing the Mutator to never have to 
 stop for GC consolidations.
 
-#### Q: "Won't the deallocation of the old A and B maps cause work for the Mutator?"
-A: No, we can deallocate A and B en-masse based on how allocations will only 
+#### Q: "Won't the deallocation of the old C and B maps cause work for the Mutator?"
+A: No, we can deallocate C and B en-masse based on how allocations will only 
 have increasing offsets and how we calculate our used-data-range of the 
 ring-buffer.  The used-data-range of the ring-buffer goes from `LOW = 
 min(lowest_offset(A), lowest_offset(B), lowest_offset(C))` to `HIGH = cursor` 
-(the ring-buffer's next-allocation cursor).  As each A map was formerly a B 
-map, and each B map was formerly a C map, note that the following is true for a 
-given set of maps: `lowest_offset(A) < lowest_offset(B) < lowest_offset(C)`.  
+(the ring-buffer's next-allocation cursor).  As each C map was formerly a B 
+map, and each B map was formerly an A map, note that the following is true for a 
+given set of maps: `lowest_offset(C) < lowest_offset(B) < lowest_offset(A)`.  
 Also, as the maps get reassigned by Mutator upon notifcation of GC 
-consolidation, note that the following will be true: `lowest_offset(old_A) < 
+consolidation, note that the following will be true: `lowest_offset(old_C) < 
 lowest_offset(M) AND lowest_offset(old_B) < lowest_offset(M)`.  This is because 
-M must necessarily have been constructed *after* A and B, so it will have a 
+M must necessarily have been constructed *after* C and B, so it will have a 
 higher `lowest_offset` than both of them.  As such, upon the reassignment of 
-the maps and recalculation of `LOW`, the old_A and old_B maps will exist below 
+the maps and recalculation of `LOW`, the old_C and old_B maps will exist below 
 `LOW` (`LOW` having been essentially recalculated as `LOW = 
-min(lowest_offset(M), lowest_offset(old_C), lowest_offset(new_C))`.  This means 
-old_A and old_B now exist outside the used data range (LOW..HIGH) of the 
+min(lowest_offset(M), lowest_offset(old_A), lowest_offset(new_A))`.  This means 
+old_C and old_B now exist outside the used data range (LOW..HIGH) of the 
 ring-buffer, which means those locations are considered deallocated and free 
 for reuse with no further action.
 
 #### Q: "Will the Mutator and GC need to contend through atomic operations on the ring-buffer's cursor?"
 A: No, Mutator can initiate the GC collection by preallocating a region in the 
-ring-buffer which is `size(A) + size(B)` and then passing that region to GC to 
-be filled in with M.  Note that this doesn't affect M's relative placement to A 
-and B:  M will still exist after A and B.
+ring-buffer which is `size(C) + size(B)` and then passing that region to GC to 
+be filled in with M.  Note that this doesn't affect M's relative placement to C 
+and B:  M will still exist after C and B.
 
 #### Q: "What happens when the offset reaches the end of the ring-buffer and as such gets modulo'd down to a lower value?  Then the above comparisons won't work, right?"
 A: We keep the offsets in a pre-modulo'd state (actually, "pre-masked" as we 
@@ -220,28 +220,28 @@ The algorithm requires 3 key-value maps: A, B, C.  In the initial state, these
 each begin empty:
 
 ```
-    A            B            C
+    C            B            A
    ---          ---          ---
    (empty)      (empty)      (empty)
 ```
 
-New allocations of class instances are assigned in C.  Here the program has 
+New allocations of class instances are assigned in A.  Here the program has 
 allocated three new instances:
 
 ```
-    A            B            C
+    C            B            A
    ---          ---          ---
    (empty)      (empty)      0 -> 0x10
                              1 -> 0x20
                              2 -> 0x30
 ```
 
-Deallocations of instances are not removed from C, instead a tombstone value 
+Deallocations of instances are not removed from A, instead a tombstone value 
 indicating non-presence is stored.  Here the program has deallocated instance 
 1:
 
 ```
-    A            B            C
+    C            B            A
    ---          ---          ---
    (empty)      (empty)      0 -> 0x10
                              1 -> TOMBSTONE
@@ -251,14 +251,14 @@ indicating non-presence is stored.  Here the program has deallocated instance
 At this point, the main program thread (a.k.a. the Mutator) intitates a garbage 
 collection (e.g.  due to a timer, or a number of function calls, or some other
 reason).  This will allow the separate garbage collector thread to begin the 
-work of compacting the full set of items still in existence in A and B.
+work of compacting the full set of items still in existence in B and C.
 
-Message from Mutator To GC:  `{ do_collection, A, B }`
+Message from Mutator To GC:  `{ do_collection, B, C }`
 
-The main program thread (a.k.a. the Mutator) continues to run and modify C:
+The main program thread (a.k.a. the Mutator) continues to run and modify A:
 
 ```
-    A            B            C
+    C            B            A
    ---          ---          ---
    (empty)      (empty)      0 -> 0x10
                              1 -> TOMBSTONE
@@ -268,31 +268,31 @@ The main program thread (a.k.a. the Mutator) continues to run and modify C:
 ```
 
 The Garbage Collector thread replies to the Mutator thread with its resultant 
-consolidation.  This is represented by a new map called M which contains the 
-union of all entries in A or B, minus any keys which had a TOMBSTONE in B.  (B 
-acts as an overlay of A).  Also, the address value for each remaining key has 
+consolidation.  This is represented by a new map called newB which contains the 
+union of all entries in B or C, minus any keys which had a TOMBSTONE in B.  (B 
+acts as an overlay of C).  Also, the address value for each remaining key has 
 has been rewritten to point to a new, relocated address.
 
 ```
-    M
-   ---
+    newB
+   ------
    (empty)
 ```
 
-Message from GC to Mutator:  `{ collection_done, M }`
+Message from GC to Mutator:  `{ collection_done, newB }`
 
 At this point, the Mutator incorporates the GC-consolidated memory into its 
 worldview.  These assignments happen atomically as far as main program 
 execution is concerned:
 
 ```
-A = M
-B = C
+A remains the same
+B = newB
 C = (empty)
 
-    A            B                  C
+    C            B                  A
    ---          ---                ---
-   (empty)      0 -> 0x10          (empty)
+   (empty)      0 -> 0x10          (whatever it already contained)
                 1 -> TOMBSTONE
                 2 -> 0x30
                 3 -> TOMBSTONE
@@ -302,7 +302,7 @@ C = (empty)
 Let's do a few more allocations:
 
 ```
-    A            B                  C
+    C            B                  A
    ---          ---                ---
    (empty)      0 -> 0x10          5 -> 0x60
                 1 -> TOMBSTONE     6 -> 0x70
@@ -314,17 +314,17 @@ Let's do a few more allocations:
 Now another merge...
 
 ```
-    M
-   ---
+    newB
+   ------
    0 -> 0x80
    2 -> 0x90
    4 -> 0xA0
 ```
 
-... while C continues to be modified...
+... while A continues to be modified...
 
 ```
-    A            B                  C
+    C            B                  A
    ---          ---                ---
    (empty)      0 -> 0x10          2 -> TOMBSTONE
                 1 -> TOMBSTONE     6 -> 0x70
@@ -336,7 +336,7 @@ Now another merge...
 ... another map reassignment...
 
 ```
-    A            B                  C
+    C            B                  A
    ---          ---                ---
    0 -> 0x80    2 -> TOMBSTONE    (empty)
    2 -> 0x90    6 -> 0x70
@@ -354,10 +354,10 @@ Now another merge...
    7 -> 0xF0
 ```
 
-... while C continues to be modified...
+... while A continues to be modified...
 
 ```
-    A            B                  C
+    C            B                  A
    ---          ---                ---
    0 -> 0x80    2 -> TOMBSTONE     8 -> 0x100
    2 -> 0x90    6 -> 0x70          9 -> 0x110
@@ -367,7 +367,7 @@ Now another merge...
 ... and finally, another map reassignment.
 
 ```
-    A            B                  C
+    C            B                  A
    ---          ---                ---
    0 -> 0xC0    8 -> 0x100         (empty)
    4 -> 0xD0    9 -> 0x110
@@ -376,24 +376,24 @@ Now another merge...
 ```
 
 Note here several things:
-1) TOMBSTONEs get removed from A and B as they get merged to M, as M will no 
-longer need to overlay any other map with its deletions once M is installed as 
-the new A.
-2) The C map proceeded with modifications as M was being built.
+1) TOMBSTONEs get removed from C and B as they get merged to newB, as newB will no 
+longer need to overlay any other map with its deletions once newB is installed as 
+the new B.
+2) The A map proceeded with modifications as newB was being built.
 3) During the first collection iteration, the instance 2 has been deleted in 
-the C map, even as M is also concerned with instance 2 for the collection.  The 
+the A map, even as newB is also concerned with instance 2 for the collection.  The 
 overlay semantics guarantees that this will not be a problem.
-4) During the first allocation The C map allocations continued at 0xB0, while M 
+4) During the first allocation The A map allocations continued at 0xB0, while newB 
 used 0x80, 0x90, and 0xA0.  This is because the initiation of the GC was able 
 to allocate an appropriately sized region for M to allocate within and bump the 
 cursor ahead by this amount.  The M map allocates from within this region 
-arranged for it, and the C map allocates beyond it.
+arranged for it, and the A map allocates beyond it.
 5) Omitted in this illustration:  the map implementation will have its own 
 internal nodes, so addresses would not appear so regularly-spaced; TOMBSTONEs 
-take up space as they require aforementioned internal nodes; the sizing of M 
+take up space as they require aforementioned internal nodes; the sizing of newB 
 may be a maximal size and not as accurate as portrayed here; allocations within 
-M's region would be most efficient when moving the cursor in reverse, as this 
-would allow maximizing M's lowest_bound (further packing the ring-buffer's 
+newB's region would be most efficient when moving the cursor in reverse, as this 
+would allow maximizing newB's lowest_bound (further packing the ring-buffer's 
 still-in-use data towards upper offsets and thereby maximizing the available 
 data range).
 
@@ -408,11 +408,11 @@ void* offset_to_address(offset)
 
 offset dereference_handle_for_read(handle)
 {
-    if (C[handle] exists) {
-        if (C[handle] == TOMBSTONE)
+    if (A[handle] exists) {
+        if (A[handle] == TOMBSTONE)
             return NULLOFFSET;
 
-        return C[handle];
+        return A[handle];
     }
 
     if (B[handle] exists) {
@@ -422,9 +422,9 @@ offset dereference_handle_for_read(handle)
         return B[handle];
     }
 
-    if (A[handle] exists) {
+    if (C[handle] exists) {
         /* Cannot be TOMBSTONE, as these will be cleared by consolidation */
-        return A[handle];
+        return C[handle];
     }
 
     return NULLOFFSET;
@@ -432,11 +432,11 @@ offset dereference_handle_for_read(handle)
 
 offset dereference_handle_for_write(handle)
 {
-    if (C[handle] exists) {
-        if (C[handle] == TOMBSTONE)
+    if (A[handle] exists) {
+        if (A[handle] == TOMBSTONE)
             return NULLOFFSET;
 
-        return C[handle];
+        return A[handle];
     }
 
     if (B[handle] exists) {
@@ -444,14 +444,14 @@ offset dereference_handle_for_write(handle)
             return NULLOFFSET;
 
         new_offset = copy_instance_at(B[handle]);
-        C[handle] = new_offset;
+        A[handle] = new_offset;
         return new_offset;
     }
 
-    if (A[handle] exists) {
+    if (C[handle] exists) {
         /* Cannot be TOMBSTONE, as these will be cleared by consolidation */
-        new_offset = copy_instance_at(A[handle]);
-        C[handle] = new_offset;
+        new_offset = copy_instance_at(C[handle]);
+        A[handle] = new_offset;
         return new_offset;
     }
 
