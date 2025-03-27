@@ -26,6 +26,9 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
+#ifdef __linux__
+#include <linux/limits.h> // Include for PATH_MAX on Linux
+#endif
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -50,10 +53,17 @@ typedef void (*cb_on_resize_t)(struct cb *old_cb, struct cb *new_cb);
 //FIXME extend with other errors and use everywhere
 enum cb_error
 {
-    CB_SUCCESS  =  0,
-    CB_FAILURE  = -1,
-    CB_BADPARAM = -2,
-    CB_DEPLETED = -3
+    CB_SUCCESS              =  0,
+    CB_FAILURE              = -1, // Generic failure
+    CB_BADPARAM             = -2, // Invalid parameter to function
+    CB_DEPLETED             = -3, // Resource depleted (e.g., memory)
+    CB_ERROR_NOT_FOUND      = -4, // Item not found in lookup
+    CB_ERROR_INVALID_OFFSET = -5, // Provided offset is invalid
+    CB_ERROR_UNDERFLOW      = -6, // Operation would cause underflow (e.g., size adjustment)
+    CB_ERROR_INVALID_STATE  = -7, // Internal state inconsistency detected
+    CB_ERROR_NOT_IMPLEMENTED= -8, // Functionality not yet implemented
+    CB_ERROR_COLLISION      = -9  // Hash collision detected where not expected/handled
+    // Add more specific errors as needed
 };
 
 

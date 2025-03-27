@@ -16,6 +16,7 @@ set(CB_SOURCES
   "${CMAKE_SOURCE_DIR}/src/cb_region.c"
   "${CMAKE_SOURCE_DIR}/src/cb_structmap.c"
   "${CMAKE_SOURCE_DIR}/src/cb_term.c"
+  "${CMAKE_SOURCE_DIR}/src/cb_hamt.c" # Added new HAMT source file
 )
 
 include_directories(
@@ -58,6 +59,12 @@ install(TARGETS libcb_static DESTINATION lib)
 add_executable(test_unit_bst "${CMAKE_SOURCE_DIR}/test/test_unit_bst.c")
 target_link_libraries(test_unit_bst libcb_static)
 set_target_properties(test_unit_bst PROPERTIES
+    LINKER_LANGUAGE C)
+
+
+add_executable(test_unit_hamt "${CMAKE_SOURCE_DIR}/test/test_unit_hamt.c")
+target_link_libraries(test_unit_hamt libcb_static)
+set_target_properties(test_unit_hamt PROPERTIES
     LINKER_LANGUAGE C)
 
 

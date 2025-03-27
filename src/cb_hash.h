@@ -25,7 +25,7 @@
 
 #define XXH_FORCE_NATIVE_FORMAT  1
 #define XXH_PRIVATE_API          1
-#include "external/xxhash.h"
+#include "../external/xxhash.h" // Adjusted path relative to src directory
 
 
 typedef uint64_t      cb_hash_t;
