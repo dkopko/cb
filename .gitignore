@@ -3,3 +3,4 @@ BUILD/
 TESTRUNS/
 compile_commands.json
 .*.swp
+map-*-*
