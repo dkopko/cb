@@ -1,3 +1,4 @@
+.cache/
 BUILD/
 TESTRUNS/
 compile_commands.json
