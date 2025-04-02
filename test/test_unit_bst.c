@@ -5,6 +5,22 @@
 #include "cb_region.h"
 #include "cb_term.h"
 
+struct traverse_check_state {
+    bool found;
+    uint64_t target_key;
+    uint64_t target_value;
+};
+
+static int check_key_value(const struct cb_term *key,
+                          const struct cb_term *value,
+                          void *closure) {
+    struct traverse_check_state *state = (struct traverse_check_state *)closure;
+    if (cb_term_get_u64(key) == state->target_key) {
+        state->found = true;
+        cb_assert(cb_term_get_u64(value) == state->target_value);
+    }
+    return 0;
+}
 
 int
 main(int argc, char **argv)
@@ -24,7 +40,6 @@ main(int argc, char **argv)
     (void)ret;
     (void)bret;
 
-
     /* Initialize library. */
     ret = cb_module_init();
     if (ret != 0)
@@ -32,7 +47,6 @@ main(int argc, char **argv)
         fprintf(stderr, "cb_module_init() failed.\n");
         return EXIT_FAILURE;
     }
-
 
     /* Create CB. */
     cb_params.ring_size = 8192;
@@ -51,7 +65,6 @@ main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-
     /* Test insert. */
     cb_term_set_u64(&term_a, 1);
     cb_term_set_u64(&term_b, 10);
@@ -68,19 +81,16 @@ main(int argc, char **argv)
     ret = cb_bst_insert(&cb, &region, &bst_root, 0, &term_a, &term_b);
     cb_assert(ret == 0);
 
-
     /* Test lookup success. */
     cb_term_set_u64(&term_a, 1);
     ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
     cb_assert(ret == 0);
     cb_assert(cb_term_get_u64(&term_c) == 10);
 
-
     /* Test lookup failure. */
     cb_term_set_u64(&term_a, 99);
     ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
     cb_assert(ret != 0);
-
 
     /* Test insert overwrites. */
     cb_term_set_u64(&term_a, 4);
@@ -103,37 +113,70 @@ main(int argc, char **argv)
     cb_assert(ret == 0);
     cb_assert(cb_term_get_u64(&term_c) == 40);
 
+    /* Test comprehensive deletion */
+    {
+        /* Test key 2: pre-deletion state */
+        {
+            struct traverse_check_state state = {
+                .found = false,
+                .target_key = 2,
+                .target_value = 20
+            };
 
-    /* Test delete success. */
-    cb_term_set_u64(&term_a, 2);
-    ret = cb_bst_delete(&cb, &region, &bst_root, 0, &term_a);
-    cb_assert(ret == 0);
+            /* Verify key exists and returns correct value */
+            cb_term_set_u64(&term_a, 2);
+            ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
+            cb_assert(ret == 0);
+            cb_assert(cb_term_get_u64(&term_c) == 20);
 
+            /* Verify key appears in traversal */
+            ret = cb_bst_traverse(cb, bst_root, check_key_value, &state);
+            cb_assert(ret == 0);
+            cb_assert(state.found);
+        }
 
-    /* Test delete failure. */
-    cb_term_set_u64(&term_a, 99);
-    ret = cb_bst_delete(&cb, &region, &bst_root, 0, &term_a);
-    cb_assert(ret != 0);
+        /* Delete key 2 */
+        cb_term_set_u64(&term_a, 2);
+        ret = cb_bst_delete(&cb, &region, &bst_root, 0, &term_a);
+        cb_assert(ret == 0);
 
+        /* Test key 2: post-deletion state */
+        {
+            struct traverse_check_state state = {
+                .found = false,
+                .target_key = 2,
+                .target_value = 20
+            };
+
+            /* Verify key no longer exists */
+            cb_term_set_u64(&term_a, 2);
+            ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
+            cb_assert(ret != 0);
+
+            /* Verify key no longer appears in traversal */
+            ret = cb_bst_traverse(cb, bst_root, check_key_value, &state);
+            cb_assert(ret == 0);
+            cb_assert(!state.found);
+        }
+
+        /* Test delete failure on non-existent key */
+        cb_term_set_u64(&term_a, 99);
+        ret = cb_bst_delete(&cb, &region, &bst_root, 0, &term_a);
+        cb_assert(ret != 0);
+    }
 
     /* Test contains key. */
     cb_term_set_u64(&term_a, 3);
     bret = cb_bst_contains_key(cb, bst_root, &term_a);
     cb_assert(bret);
 
-
     /* Test does not contain key. */
     cb_term_set_u64(&term_a, 99);
     bret = cb_bst_contains_key(cb, bst_root, &term_a);
     cb_assert(!bret);
 
-
-    /* Test traversal FIXME. */
-
-
     /* Test print. */
     cb_bst_print(&cb, bst_root);
-
 
     /* Test comparison */
     {
@@ -201,7 +244,6 @@ main(int argc, char **argv)
         cb_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
         cb_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
     }
-
 
     /* Test size. */
     {
@@ -434,4 +476,3 @@ main(int argc, char **argv)
 
     return EXIT_SUCCESS;
 }
-
