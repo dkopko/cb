@@ -12,9 +12,13 @@ struct traverse_check_state {
 };
 
 static int check_key_value(const struct cb_term *key,
-                          const struct cb_term *value,
-                          void *closure) {
+                           const struct cb_term *value,
+                           void                 *closure)
+{
     struct traverse_check_state *state = (struct traverse_check_state *)closure;
+
+    (void)value;
+
     if (cb_term_get_u64(key) == state->target_key) {
         state->found = true;
         cb_assert(cb_term_get_u64(value) == state->target_value);
