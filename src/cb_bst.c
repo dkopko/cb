@@ -2408,6 +2408,18 @@ cb_bst_cmp(const struct cb      *cb,
            cb_offset_t           lhs_header_offset,
            cb_offset_t           rhs_header_offset)
 {
+    /* Handle sentinel cases first */
+    if (lhs_header_offset == CB_BST_SENTINEL) {
+        if (rhs_header_offset == CB_BST_SENTINEL) {
+            return 0;  /* Both are sentinel -> equal */
+        }
+        return -1;     /* Only lhs is sentinel -> lhs < rhs */
+    }
+    if (rhs_header_offset == CB_BST_SENTINEL) {
+        return 1;      /* Only rhs is sentinel -> lhs > rhs */
+    }
+
+    /* Now safe to get headers */
     struct cb_bst_header *lhs_header;
     struct cb_bst_header *rhs_header;
 
