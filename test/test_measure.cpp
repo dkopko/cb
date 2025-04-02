@@ -12,7 +12,7 @@ namespace {
 extern "C" {
 #include "cb.h"
 #include "cb_bst.h"
-#include "cb_map.h"
+//#include "cb_map.h"
 #include "cb_random.h"
 };
 };
@@ -332,7 +332,7 @@ static struct map_impl cbbst_impl = {
     .handle_events_cb = cbbst_handle_events
 };
 
-
+#if 0
 struct cbmap_impl_state
 {
     struct cb        *cb;
@@ -536,7 +536,7 @@ static struct map_impl cbmap_impl = {
     .destroy_cb       = cbmap_destroy,
     .handle_events_cb = cbmap_handle_events
 };
-
+#endif
 
 struct known_set
 {
@@ -910,7 +910,7 @@ static void print_help(char const *progname)
            "\t--pre-insert <n>\n"
            "\t--event-count\n"
            "\t--impl <implementations>\n"
-           "\t\t(where implementations: stdmap,cbbst,cbmap\n"
+           "\t\t(where implementations: stdmap,cbbst\n"
            "\t--ratios <ratios>\n"
            "\t\t(where ratios: <insert_unknown>,<insert_known>,<remove_unknown>,<remove_known>,<lookup_unknown>,<lookup_known>)\n"
            "\t--seed <n>\n"
@@ -934,7 +934,8 @@ int main(int argc, char **argv)
         { "seed",        required_argument, NULL, 's' }, /* main */
         { 0, 0, 0, 0 }
     };
-    static struct map_impl ALL_IMPLS[] = { stdmap_impl, cbbst_impl, cbmap_impl };
+    //static struct map_impl ALL_IMPLS[] = { stdmap_impl, cbbst_impl, cbmap_impl };
+    static struct map_impl ALL_IMPLS[] = { stdmap_impl, cbbst_impl };
     struct cb_random_state rs;
     struct event *events,
                  *postremove_events;
