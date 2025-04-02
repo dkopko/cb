@@ -106,6 +106,9 @@ set_target_properties(test_structmap PROPERTIES
 
 
 enable_testing()
+set(CTEST_PROJECT_NAME "cb")
+set(CTEST_NIGHTLY_START_TIME "00:00:00 EST")
+include(CTest)
 add_test(test_misc test_misc)
 add_test(test_lb_set test_lb_set)
 add_test(test_measure test_measure)
