@@ -447,7 +447,7 @@ cb_map_consolidate_internal(struct cb_map *cb_map)
 
     cb_validate2(*(cb_map->cb));
 
-    initial_cursor_offset = cb_cursor(*(cb_map->cb));
+    initial_cursor_offset = cb_region_cursor(&(cb_map->region));
 
     cmd_offset = cb_map->last_command_offset;
     cmd        = (struct cb_command_any *)cb_at(*(cb_map->cb), cmd_offset);
