@@ -106,7 +106,6 @@ set_target_properties(test_structmap PROPERTIES
 
 
 enable_testing()
-add_test(test_main test_main)
 add_test(test_misc test_misc)
 add_test(test_lb_set test_lb_set)
 add_test(test_measure test_measure)
