@@ -497,6 +497,8 @@ cb_map_consolidate_internal(struct cb_map *cb_map)
 
             case CB_CMD_BST:
             {
+                //NOTE: THIS IMPLEMENTATION IS WRONG!
+                //Insertions and deletions may be interspersed, so it is not correct to do all deletions followed by all insertions.
                 struct traverse_state ts;
 
                 ts.cb                   = cb_map->cb;
