@@ -2377,8 +2377,8 @@ descend:
     }
 
     header = cb_bst_header_at(*cb, s.new_header_offset);
-    cb_assert(internal_size_subtract < header->total_internal_size);
-    cb_assert(external_size_subtract < header->total_external_size);
+    cb_assert(internal_size_subtract <= header->total_internal_size);
+    cb_assert(external_size_subtract <= header->total_external_size);
     header->total_internal_size -= internal_size_subtract;
     header->total_external_size -= external_size_subtract;
     header->num_entries         -= num_entries_adjust;
