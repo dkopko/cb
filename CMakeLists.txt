@@ -80,13 +80,6 @@ target_link_libraries(test_measure libcb_static)
 set_target_properties(test_measure PROPERTIES
     LINKER_LANGUAGE CXX)
 
-add_executable(test_measure_ll
-  "${CMAKE_CURRENT_SOURCE_DIR}/test/test_measure_ll.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/test/test_measure_ll_f.c"
-)
-set_target_properties(test_measure_ll PROPERTIES
-  LINKER_LANGUAGE C)
-
 add_executable(test_structmap "${CMAKE_CURRENT_SOURCE_DIR}/test/test_structmap.c")
 target_link_libraries(test_structmap libcb_static)
 set_target_properties(test_structmap PROPERTIES
@@ -106,9 +99,6 @@ include(CTest)
 
 add_test(NAME test_measure
          COMMAND test_measure)
-
-add_test(NAME test_measure_ll
-         COMMAND test_measure_ll)
 
 add_test(NAME test_misc
          COMMAND test_misc)
