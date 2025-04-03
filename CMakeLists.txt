@@ -9,7 +9,6 @@ set(CB_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_bst.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_log.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_print.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_random.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_region.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_structmap.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_term.c"
@@ -75,7 +74,10 @@ target_link_libraries(test_test_assert libcb_static)
 set_target_properties(test_test_assert PROPERTIES
     LINKER_LANGUAGE C)
 
-add_executable(test_measure "${CMAKE_CURRENT_SOURCE_DIR}/test/test_measure.cpp")
+add_executable(test_measure
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/test_measure.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/cb_random.c"
+)
 target_link_libraries(test_measure libcb_static)
 set_target_properties(test_measure PROPERTIES
     LINKER_LANGUAGE CXX)
