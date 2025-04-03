@@ -1,3 +1,4 @@
+#undef NDEBUG
 #include "cb_assert.h"
 
 int
@@ -7,4 +8,3 @@ main(int argc, char **argv)
     cb_assert(false);
     return 0;
 }
-

@@ -1,4 +1,4 @@
-#include <assert.h>
+#include "test_assert.h"
 #include <stdio.h>
 #include "cb.h"
 #include "cb_bst.h"
@@ -21,7 +21,7 @@ static int check_key_value(const struct cb_term *key,
 
     if (cb_term_get_u64(key) == state->target_key) {
         state->found = true;
-        cb_assert(cb_term_get_u64(value) == state->target_value);
+        test_assert(cb_term_get_u64(value) == state->target_value);
     }
     return 0;
 }
@@ -73,49 +73,49 @@ main(int argc, char **argv)
     cb_term_set_u64(&term_a, 1);
     cb_term_set_u64(&term_b, 10);
     ret = cb_bst_insert(&cb, &region, &bst_root, 0, &term_a, &term_b);
-    cb_assert(ret == 0);
+    test_assert(ret == 0);
 
     cb_term_set_u64(&term_a, 2);
     cb_term_set_u64(&term_b, 20);
     ret = cb_bst_insert(&cb, &region, &bst_root, 0, &term_a, &term_b);
-    cb_assert(ret == 0);
+    test_assert(ret == 0);
 
     cb_term_set_u64(&term_a, 3);
     cb_term_set_u64(&term_b, 30);
     ret = cb_bst_insert(&cb, &region, &bst_root, 0, &term_a, &term_b);
-    cb_assert(ret == 0);
+    test_assert(ret == 0);
 
     /* Test lookup success. */
     cb_term_set_u64(&term_a, 1);
     ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
-    cb_assert(ret == 0);
-    cb_assert(cb_term_get_u64(&term_c) == 10);
+    test_assert(ret == 0);
+    test_assert(cb_term_get_u64(&term_c) == 10);
 
     /* Test lookup failure. */
     cb_term_set_u64(&term_a, 99);
     ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
-    cb_assert(ret != 0);
+    test_assert(ret != 0);
 
     /* Test insert overwrites. */
     cb_term_set_u64(&term_a, 4);
     cb_term_set_u64(&term_b, 39);
     ret = cb_bst_insert(&cb, &region, &bst_root, 0, &term_a, &term_b);
-    cb_assert(ret == 0);
+    test_assert(ret == 0);
 
     cb_term_set_u64(&term_a, 4);
     ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
-    cb_assert(ret == 0);
-    cb_assert(cb_term_get_u64(&term_c) == 39);
+    test_assert(ret == 0);
+    test_assert(cb_term_get_u64(&term_c) == 39);
 
     cb_term_set_u64(&term_a, 4);
     cb_term_set_u64(&term_b, 40);
     ret = cb_bst_insert(&cb, &region, &bst_root, 0, &term_a, &term_b);
-    cb_assert(ret == 0);
+    test_assert(ret == 0);
 
     cb_term_set_u64(&term_a, 4);
     ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
-    cb_assert(ret == 0);
-    cb_assert(cb_term_get_u64(&term_c) == 40);
+    test_assert(ret == 0);
+    test_assert(cb_term_get_u64(&term_c) == 40);
 
     /* Test comprehensive deletion */
     {
@@ -130,19 +130,19 @@ main(int argc, char **argv)
             /* Verify key exists and returns correct value */
             cb_term_set_u64(&term_a, 2);
             ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
-            cb_assert(ret == 0);
-            cb_assert(cb_term_get_u64(&term_c) == 20);
+            test_assert(ret == 0);
+            test_assert(cb_term_get_u64(&term_c) == 20);
 
             /* Verify key appears in traversal */
             ret = cb_bst_traverse(cb, bst_root, check_key_value, &state);
-            cb_assert(ret == 0);
-            cb_assert(state.found);
+            test_assert(ret == 0);
+            test_assert(state.found);
         }
 
         /* Delete key 2 */
         cb_term_set_u64(&term_a, 2);
         ret = cb_bst_delete(&cb, &region, &bst_root, 0, &term_a);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
 
         /* Test key 2: post-deletion state */
         {
@@ -155,29 +155,29 @@ main(int argc, char **argv)
             /* Verify key no longer exists */
             cb_term_set_u64(&term_a, 2);
             ret = cb_bst_lookup(cb, bst_root, &term_a, &term_c);
-            cb_assert(ret != 0);
+            test_assert(ret != 0);
 
             /* Verify key no longer appears in traversal */
             ret = cb_bst_traverse(cb, bst_root, check_key_value, &state);
-            cb_assert(ret == 0);
-            cb_assert(!state.found);
+            test_assert(ret == 0);
+            test_assert(!state.found);
         }
 
         /* Test delete failure on non-existent key */
         cb_term_set_u64(&term_a, 99);
         ret = cb_bst_delete(&cb, &region, &bst_root, 0, &term_a);
-        cb_assert(ret != 0);
+        test_assert(ret != 0);
     }
 
     /* Test contains key. */
     cb_term_set_u64(&term_a, 3);
     bret = cb_bst_contains_key(cb, bst_root, &term_a);
-    cb_assert(bret);
+    test_assert(bret);
 
     /* Test does not contain key. */
     cb_term_set_u64(&term_a, 99);
     bret = cb_bst_contains_key(cb, bst_root, &term_a);
-    cb_assert(!bret);
+    test_assert(!bret);
 
     /* Test print. */
     cb_bst_print(&cb, bst_root);
@@ -205,48 +205,48 @@ main(int argc, char **argv)
         cb_term_set_u64(&value4, 4);
 
         /* Empty BSTs are equal. */
-        cb_assert(cb_bst_cmp(cb, bst1, bst2) == 0);
-        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 0);
+        test_assert(cb_bst_cmp(cb, bst1, bst2) == 0);
+        test_assert(cb_bst_cmp(cb, bst2, bst1) == 0);
 
         /* Filled BSTs greater than empty BSTs. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key1, &value1);
-        cb_assert(ret == 0);
-        cb_assert(cb_bst_cmp(cb, bst1, bst2) == 1);
-        cb_assert(cb_bst_cmp(cb, bst2, bst1) == -1);
+        test_assert(ret == 0);
+        test_assert(cb_bst_cmp(cb, bst1, bst2) == 1);
+        test_assert(cb_bst_cmp(cb, bst2, bst1) == -1);
 
         /* Non-empty equal entries BSTs. */
         ret = cb_bst_insert(&cb, &region, &bst2, 0, &key1, &value1);
-        cb_assert(ret == 0);
-        cb_assert(cb_bst_cmp(cb, bst1, bst2) == 0);
-        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 0);
+        test_assert(ret == 0);
+        test_assert(cb_bst_cmp(cb, bst1, bst2) == 0);
+        test_assert(cb_bst_cmp(cb, bst2, bst1) == 0);
 
         /* key difference. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key2, &value2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         ret = cb_bst_insert(&cb, &region, &bst2, 0, &key3, &value2);
-        cb_assert(ret == 0);
-        cb_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
-        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
+        test_assert(ret == 0);
+        test_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
+        test_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
 
         /* value difference. */
         ret = cb_bst_insert(&cb, &region, &bst2, 0, &key2, &value2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key3, &value2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         ret = cb_bst_insert(&cb, &region, &bst2, 0, &key3, &value3);
-        cb_assert(ret == 0);
-        cb_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
-        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
+        test_assert(ret == 0);
+        test_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
+        test_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
 
         /* additional entries. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key3, &value3);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         ret = cb_bst_insert(&cb, &region, &bst2, 0, &key3, &value3);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         ret = cb_bst_insert(&cb, &region, &bst2, 0, &key4, &value4);
-        cb_assert(ret == 0);
-        cb_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
-        cb_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
+        test_assert(ret == 0);
+        test_assert(cb_bst_cmp(cb, bst1, bst2) == -1);
+        test_assert(cb_bst_cmp(cb, bst2, bst1) == 1);
     }
 
     /* Test size. */
@@ -282,39 +282,39 @@ main(int argc, char **argv)
         cb_term_set_u64(&value3, 3);
 
         empty_size = cb_bst_size(cb, bst1);
-        cb_assert(empty_size == 0);
+        test_assert(empty_size == 0);
 
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key1, &value1);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         size1 = cb_bst_size(cb, bst1);
 
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key2, &value2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         size2 = cb_bst_size(cb, bst1);
 
         node_size = (size2 - size1);
         header_size = (size1 - empty_size) - node_size;
-        cb_assert(size1 == header_size + node_size);
+        test_assert(size1 == header_size + node_size);
         printf("header_size: %zu\n", header_size);
         printf("node_size: %zu\n", node_size);
 
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key3, &value3);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         size3 = cb_bst_size(cb, bst1);
-        cb_assert(size3 - size2 == node_size);
+        test_assert(size3 - size2 == node_size);
 
         ret = cb_bst_delete(&cb, &region, &bst1, 0, &key2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         size4 = cb_bst_size(cb, bst1);
-        cb_assert(size4 == size2);
+        test_assert(size4 == size2);
 
         bst1_size = cb_bst_size(cb, bst1);
         cb_term_set_bst(&value4, bst1);
 
         ret = cb_bst_insert(&cb, &region, &bst2, 0, &key4, &value4);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         size5 = cb_bst_size(cb, bst2);
-        cb_assert(size5 == header_size + node_size + bst1_size);
+        test_assert(size5 == header_size + node_size + bst1_size);
     }
 
     /* Test hash. */
@@ -358,74 +358,74 @@ main(int argc, char **argv)
 
         /* First element hash. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key1, &value1);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash2 = cb_bst_hash(cb, bst1);
         printf("hash2: %ju\n", (uintmax_t)hash2);
-        cb_assert(hash1 != hash2);
+        test_assert(hash1 != hash2);
 
         /* Return to empty hash. */
         ret = cb_bst_delete(&cb, &region, &bst1, 0, &key1);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash3 = cb_bst_hash(cb, bst1);
         printf("hash3: %ju\n", (uintmax_t)hash3);
-        cb_assert(hash3 == hash1);
+        test_assert(hash3 == hash1);
 
         /* Return to first element hash. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key1, &value1);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash4 = cb_bst_hash(cb, bst1);
         printf("hash4: %ju\n", (uintmax_t)hash4);
-        cb_assert(hash4 == hash2);
+        test_assert(hash4 == hash2);
 
         /* Overwrite with same data leads to same hash. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key1, &value1);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash5 = cb_bst_hash(cb, bst1);
         printf("hash5: %ju\n", (uintmax_t)hash5);
-        cb_assert(hash5 == hash2);
+        test_assert(hash5 == hash2);
 
         /* Additional data leads to different hash. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key2, &value2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash6 = cb_bst_hash(cb, bst1);
         printf("hash6: %ju\n", (uintmax_t)hash6);
-        cb_assert(hash6 != hash5);
+        test_assert(hash6 != hash5);
 
         /* Adjusting a value for a key leads to different hash. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key2, &value3);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash7 = cb_bst_hash(cb, bst1);
         printf("hash7: %ju\n", (uintmax_t)hash7);
-        cb_assert(hash7 != hash6);
+        test_assert(hash7 != hash6);
 
         /* Restoring a value for a key restores original hash. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key2, &value2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash8 = cb_bst_hash(cb, bst1);
         printf("hash8: %ju\n", (uintmax_t)hash8);
-        cb_assert(hash8 != hash7);
-        cb_assert(hash8 == hash6);
+        test_assert(hash8 != hash7);
+        test_assert(hash8 == hash6);
 
         /*
          * Transposition of values must lead to different hash.
          * (Set of all keys same, set of all values same.)
          */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key2, &value1);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key1, &value2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash9 = cb_bst_hash(cb, bst1);
         printf("hash9: %ju\n", (uintmax_t)hash9);
-        cb_assert(hash9 != hash8);
+        test_assert(hash9 != hash8);
 
         /* Undoing transposition restores original hash. */
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key2, &value2);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         ret = cb_bst_insert(&cb, &region, &bst1, 0, &key1, &value1);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         hash10 = cb_bst_hash(cb, bst1);
         printf("hash10: %ju\n", (uintmax_t)hash10);
-        cb_assert(hash10 == hash8);
+        test_assert(hash10 == hash8);
 
         /* Structural differences do not affect hash, which is value-based. */
         for (int i = 0; i < 10; ++i)
@@ -435,7 +435,7 @@ main(int argc, char **argv)
             cb_term_set_u64(&key, 100 * i);
             cb_term_set_u64(&value, i);
             ret = cb_bst_insert(&cb, &region, &bst2, 0, &key, &value);
-            cb_assert(ret == 0);
+            test_assert(ret == 0);
         }
         for (int i = 10; i > 0; --i)
         {
@@ -444,18 +444,18 @@ main(int argc, char **argv)
             cb_term_set_u64(&key, 100 * (i - 1));
             cb_term_set_u64(&value, i - 1);
             ret = cb_bst_insert(&cb, &region, &bst3, 0, &key, &value);
-            cb_assert(ret == 0);
+            test_assert(ret == 0);
         }
         str1 = cb_bst_to_str(&cb, bst2);
         str2 = cb_bst_to_str(&cb, bst3);
         printf("bst2: \"%s\"\n", str1);
         printf("bst3: \"%s\"\n", str2);
-        cb_assert(strcmp(str1, str2) != 0); /* i.e. BSTs differ structurally. */
+        test_assert(strcmp(str1, str2) != 0); /* i.e. BSTs differ structurally. */
         hash11 = cb_bst_hash(cb, bst2);
         printf("hash11: %ju\n", (uintmax_t)hash11);
         hash12 = cb_bst_hash(cb, bst3);
         printf("hash12: %ju\n", (uintmax_t)hash12);
-        cb_assert(hash11 == hash12);
+        test_assert(hash11 == hash12);
     }
 
     /* Test render. */
@@ -464,7 +464,7 @@ main(int argc, char **argv)
         const char *str;
 
         ret = cb_bst_render(&dest_offset, &cb, bst_root, 0);
-        cb_assert(ret == 0);
+        test_assert(ret == 0);
         str = (const char *)cb_at(cb, dest_offset);
         printf("BST rendered: \"%s\"\n", str);
     }
@@ -473,8 +473,8 @@ main(int argc, char **argv)
     {
         const char *str;
         str = cb_bst_to_str(&cb, bst_root);
-        cb_assert(str != NULL);
-        cb_assert(strlen(str) > 0);
+        test_assert(str != NULL);
+        test_assert(strlen(str) > 0);
         printf("BST as string: \"%s\"\n", str);
     }
 

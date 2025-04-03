@@ -1,6 +1,6 @@
 #include "cb_bits.h"
 #include "cb_misc.h"
-#include <assert.h>
+#include "test_assert.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +26,7 @@ power_of_2_gt_size_simple(size_t x)
 CB_INLINE unsigned int
 log2_of_power_of_2_size_simple(size_t x)
 {
-    assert(is_power_of_2_size(x));
+    test_assert(is_power_of_2_size(x));
     unsigned int result = 0;
     while (x != 1) { x >>= 1; result++; }
     return result;

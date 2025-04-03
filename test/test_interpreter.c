@@ -1,4 +1,4 @@
-#include <assert.h>
+#include "test_assert.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,14 +51,14 @@ main(int argc, char **argv)
     interpreter_arg.translate.output    = &translated_bytecode;
     ret = cb_interpret(&interpreter_arg);
     printf("cb_interpret() (translate): %d\n", ret);
-    assert(ret == 0);
+    test_assert(ret == 0);
     if (ret != 0)
         return EXIT_FAILURE;
 
     /* Execute code. */
     stack_len = 1000;
     stack = calloc(stack_len, sizeof(uintptr_t));
-    assert(stack);
+    test_assert(stack);
     if (!stack)
         return EXIT_FAILURE;
     memset(&process_state, 0, sizeof(process_state));
@@ -71,10 +71,9 @@ main(int argc, char **argv)
     interpreter_arg.execute.step_count    = 0;
     ret = cb_interpret(&interpreter_arg);
     printf("cb_interpret() (execute): %d\n", ret);
-    assert(ret == 0);
+    test_assert(ret == 0);
     if (ret != 0)
         return EXIT_FAILURE;
 
     return EXIT_SUCCESS;
 }
-
