@@ -1,0 +1,14 @@
+PROJECT_NAME        = "CB Library"
+PROJECT_BRIEF       = "A foundational library implementing a continuous buffer and related data structures"
+OUTPUT_DIRECTORY    = BUILD/docs/
+INPUT               = src/
+RECURSIVE           = YES
+EXTRACT_ALL         = YES
+EXTRACT_PRIVATE     = YES
+EXTRACT_STATIC      = YES
+GENERATE_HTML       = YES
+GENERATE_LATEX      = NO
+HAVE_DOT            = YES
+UML_LOOK            = YES
+CALL_GRAPH          = YES
+CALLER_GRAPH        = YES

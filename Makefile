@@ -9,7 +9,7 @@ BUILDROOT := $(abspath $(PROJECTROOT)/BUILD)
 
 .DEFAULT_GOAL := all
 .PHONY : all
-all : debug release relwithdebinfo minsizerel coverage
+all : debug release relwithdebinfo minsizerel coverage docs
 
 .PHONY : echo
 echo :
@@ -73,3 +73,7 @@ test_minsizerel : minsizerel
 .PHONY : test_coverage
 test_coverage : coverage
 	$(MAKE) -C "$(BUILDROOT)/Coverage" test
+
+.PHONY : docs
+docs:
+	doxygen "$(PROJECTROOT)/Doxyfile"
