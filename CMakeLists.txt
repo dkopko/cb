@@ -52,15 +52,15 @@ set_target_properties(libcb_static PROPERTIES
 install(TARGETS libcb_static DESTINATION lib)
 
 
-add_executable(test_unit_bst "${CMAKE_CURRENT_SOURCE_DIR}/test/test_unit_bst.c")
-target_link_libraries(test_unit_bst libcb_static)
-set_target_properties(test_unit_bst PROPERTIES
+add_executable(test_bst "${CMAKE_CURRENT_SOURCE_DIR}/test/test_bst.c")
+target_link_libraries(test_bst libcb_static)
+set_target_properties(test_bst PROPERTIES
     LINKER_LANGUAGE C)
 
 
-add_executable(test_unit_hash "${CMAKE_CURRENT_SOURCE_DIR}/test/test_unit_hash.c")
-target_link_libraries(test_unit_hash libcb_static)
-set_target_properties(test_unit_hash PROPERTIES
+add_executable(test_hash "${CMAKE_CURRENT_SOURCE_DIR}/test/test_hash.c")
+target_link_libraries(test_hash libcb_static)
+set_target_properties(test_hash PROPERTIES
     LINKER_LANGUAGE C)
 
 
@@ -106,8 +106,8 @@ add_test(NAME test_misc
 add_test(NAME test_structmap
          COMMAND test_structmap)
 
-add_test(NAME test_unit_bst
-         COMMAND test_unit_bst)
+add_test(NAME test_bst
+         COMMAND test_bst)
 
-add_test(NAME test_unit_hash
-         COMMAND test_unit_hash)
+add_test(NAME test_hash
+         COMMAND test_hash)
