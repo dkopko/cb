@@ -50,3 +50,26 @@ coverage :
 	cd "$(BUILDROOT)/Coverage" ; cmake "$(PROJECTROOT)" -DCMAKE_BUILD_TYPE=Coverage
 	$(MAKE) -C "$(BUILDROOT)/Coverage"
 
+.PHONY : test 
+#test : test_debug test_release test_relwithdebinfo test_minsizerel test_coverage
+test : test_release test_relwithdebinfo test_minsizerel
+
+.PHONY : test_debug
+test_debug : debug
+	$(MAKE) -C "$(BUILDROOT)/Debug" test
+
+.PHONY : test_release
+test_release : release
+	$(MAKE) -C "$(BUILDROOT)/Release" test
+
+.PHONY : test_relwithdebinfo
+test_relwithdebinfo : relwithdebinfo
+	$(MAKE) -C "$(BUILDROOT)/RelWithDebInfo" test
+
+.PHONY : test_minsizerel
+test_minsizerel : minsizerel
+	$(MAKE) -C "$(BUILDROOT)/MinSizeRel" test
+
+.PHONY : test_coverage
+test_coverage : coverage
+	$(MAKE) -C "$(BUILDROOT)/Coverage" test
