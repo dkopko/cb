@@ -17,6 +17,9 @@
 #ifndef _CB_LOG_H_
 #define _CB_LOG_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum cb_log_level
 {
@@ -42,5 +45,8 @@ void cb_log_impl(enum cb_log_level lvl, const char *fmt, ...);
 #define cb_log_debug(FMT, ARGS...) do { } while(0)
 #endif
 
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif /* ! defined _CB_LOG_H_*/
