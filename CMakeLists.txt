@@ -70,9 +70,9 @@ set_target_properties(test_misc PROPERTIES
 
 )
 
-add_executable(test_assert "${CMAKE_CURRENT_SOURCE_DIR}/test/test_assert.c")
-target_link_libraries(test_assert libcb_static)
-set_target_properties(test_assert PROPERTIES
+add_executable(test_test_assert "${CMAKE_CURRENT_SOURCE_DIR}/test/test_test_assert.c")
+target_link_libraries(test_test_assert libcb_static)
+set_target_properties(test_test_assert PROPERTIES
     LINKER_LANGUAGE C)
 
 add_executable(test_measure "${CMAKE_CURRENT_SOURCE_DIR}/test/test_measure.cpp")
@@ -97,7 +97,21 @@ enable_testing()
 set(CTEST_PROJECT_NAME "cb")
 set(CTEST_NIGHTLY_START_TIME "00:00:00 EST")
 include(CTest)
-add_test(test_misc test_misc)
-add_test(test_measure test_measure)
-add_test(test_measure_ll test_measure_ll)
-add_test(test_structmap test_structmap)
+
+# NOTE: This test cannot be automated because CMake can't handle subprocess death due to abort() usage.
+#add_test(NAME test_test_assert
+#         COMMAND test_test_assert)
+#set_property(TEST test_test_assert
+#             PROPERTY WILL_FAIL TRUE)
+
+add_test(NAME test_measure
+         COMMAND test_measure)
+
+add_test(NAME test_measure_ll
+         COMMAND test_measure_ll)
+
+add_test(NAME test_misc
+         COMMAND test_misc)
+
+add_test(NAME test_structmap
+         COMMAND test_structmap)
