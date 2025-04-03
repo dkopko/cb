@@ -105,3 +105,9 @@ add_test(NAME test_misc
 
 add_test(NAME test_structmap
          COMMAND test_structmap)
+
+add_test(NAME test_unit_bst
+         COMMAND test_unit_bst)
+
+add_test(NAME test_unit_hash
+         COMMAND test_unit_hash)
