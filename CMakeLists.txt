@@ -7,7 +7,6 @@ option(COVERAGE "Build with test coverage" OFF)
 set(CB_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_bst.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_interpreter.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_log.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_print.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_random.c"
@@ -87,11 +86,6 @@ add_executable(test_measure_ll
 )
 set_target_properties(test_measure_ll PROPERTIES
   LINKER_LANGUAGE C)
-
-add_executable(test_interpreter "${CMAKE_CURRENT_SOURCE_DIR}/test/test_interpreter.c")
-target_link_libraries(test_interpreter libcb_static)
-set_target_properties(test_interpreter PROPERTIES
-    LINKER_LANGUAGE C)
 
 add_executable(test_structmap "${CMAKE_CURRENT_SOURCE_DIR}/test/test_structmap.c")
 target_link_libraries(test_structmap libcb_static)
