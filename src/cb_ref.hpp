@@ -13,6 +13,10 @@
  * - RCBP: Rewritable Continuous Buffer pointer
  * - CBP: Continuous Buffer pointer
  */
+/* FIXMEs
+* rcbp_add()/rcbp_remove() should be static, with requisite changes to make the constructors/destructors which use them have linkage.  Performance must be checked.
+* rcbp functions remaining in the API surface should have cb_ prefix. or _cb_ prefix.
+ */
 #ifndef _CB_REF_HPP_
 #define _CB_REF_HPP_
 
