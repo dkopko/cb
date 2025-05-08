@@ -43,7 +43,7 @@ typedef size_t (*cb_structmap_amt_value_size_t)(const struct cb *cb, uint64_t v)
 typedef int (*cb_structmap_amt_traverse_func_t)(uint64_t key, uint64_t value, void *closure);
 typedef int (*cb_structmap_amt_value_cmp_func_t)(uint64_t lhsvalue, uint64_t rhsvalue);
 
-enum cb_structmap_amt_entry_type
+typedef enum cb_structmap_amt_entry_type
 {
   //In debug modes, require non-zero enum values to distinguish cases of uninitialized memory.
   //In release modes, use 0x0 for the node enum for micro-optimization of branches.
@@ -56,15 +56,15 @@ enum cb_structmap_amt_entry_type
   CB_STRUCTMAP_AMT_ENTRY_EMPTY = 0x1,
   CB_STRUCTMAP_AMT_ENTRY_ITEM  = 0x2
 #endif
-};
+} cb_structmap_amt_entry_type;
 
 static const unsigned int CB_STRUCTMAP_AMT_TYPEMASK = 0x3;
 
-struct cb_structmap_amt_entry
+typedef struct cb_structmap_amt_entry
 {
   uint64_t key_offset_and_type;
   uint64_t value;
-};
+} cb_structmap_amt_entry;
 
 extern inline cb_structmap_amt_entry_type
 cb_entrytypeof(const cb_structmap_amt_entry *entry) {
@@ -177,6 +177,7 @@ struct cb_structmap_amt
          uint64_t         key,
          uint64_t        *value) const
   {
+    (void)cb; //FIXME remove cb argument to this function
     const struct cb_structmap_amt_entry *entry = &(this->entries[key & ((1 << FIRSTLEVEL_BITS) - 1)]);
 
     assert(cb_entrytypeof(entry) == CB_STRUCTMAP_AMT_ENTRY_NODE || cb_entrytypeof(entry) == CB_STRUCTMAP_AMT_ENTRY_EMPTY || cb_entrytypeof(entry) == CB_STRUCTMAP_AMT_ENTRY_ITEM);

@@ -8,5 +8,8 @@ extern __thread struct cb        *thread_cb;
 extern __thread struct cb_at_immed_param_t thread_cb_at_immed_param;
 extern __thread struct cb_region  thread_region;
 extern __thread cb_offset_t       thread_cutoff_offset;
+extern __thread struct ObjTable   thread_objtable;
+extern __thread unsigned int      addl_collision_nodes;
+extern __thread unsigned int      snap_addl_collision_nodes;
 
 #endif /* _CB_THREAD_H_ */

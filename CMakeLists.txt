@@ -8,12 +8,13 @@ set(CB_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_bst.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_log.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_objtable.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_print.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_ref.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_region.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_structmap.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_term.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_thread.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/cb_thread.cpp"
 )
 
 include_directories(
